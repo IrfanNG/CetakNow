@@ -1,0 +1,470 @@
+{
+  "users": [
+    {
+      "id": "user_super",
+      "name": "CetakNow Owner",
+      "email": "owner@cetaknow.local",
+      "password": "password",
+      "role": "super_admin",
+      "shop_id": null,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "user_qi_admin",
+      "name": "Qalam Irma Admin",
+      "email": "admin@qalamirma.local",
+      "password": "password",
+      "role": "shop_admin",
+      "shop_id": "shop_qalamirma",
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    }
+  ],
+  "shops": [
+    {
+      "id": "shop_qalamirma",
+      "name": "Qalam Irma",
+      "slug": "qalamirma",
+      "shop_code": "QI",
+      "logo_url": "",
+      "primary_color": "#004581",
+      "description": "Upload PDF, pilih tetapan print, bayar online, dan ambil dokumen anda di Qalam Irma.",
+      "address": "Qalam Irma, student area",
+      "google_maps_url": "https://maps.google.com/",
+      "phone": "60123456789",
+      "email": "print@qalamirma.local",
+      "operating_hours": "Mon-Sat, 9:00 AM - 9:00 PM",
+      "minimum_order_amount": 5,
+      "is_active": true,
+      "plan": "pilot",
+      "subscription_status": "pilot_free",
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    }
+  ],
+  "shop_pricing": [
+    {
+      "id": "pricing_qalamirma",
+      "shop_id": "shop_qalamirma",
+      "a4_bw_price_per_page": 0.2,
+      "a4_color_price_per_page": 1.0,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    }
+  ],
+  "pickup_slots": [
+    {
+      "id": "slot_qi_d1_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d1_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d1_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d1_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d1_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d1_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 1,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d2_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 2,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d3_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 3,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d4_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 4,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d5_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 5,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_1",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_2",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "10:00",
+      "end_time": "11:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_3",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "11:00",
+      "end_time": "12:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_4",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "14:00",
+      "end_time": "15:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_5",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "16:00",
+      "end_time": "17:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    },
+    {
+      "id": "slot_qi_d6_6",
+      "shop_id": "shop_qalamirma",
+      "day_of_week": 6,
+      "start_time": "20:00",
+      "end_time": "21:00",
+      "max_orders": 5,
+      "is_active": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    }
+  ],
+  "shop_payment_settings": [
+    {
+      "id": "pay_qalamirma",
+      "shop_id": "shop_qalamirma",
+      "gateway_type": "billplz_mock",
+      "api_key": "mock",
+      "collection_id": "mock",
+      "x_signature_key": "mock_secret",
+      "is_enabled": true,
+      "created_at": "2026-05-16T00:00:00.000Z",
+      "updated_at": "2026-05-16T00:00:00.000Z"
+    }
+  ],
+  "orders": [],
+  "payments": [],
+  "notifications": []
+}

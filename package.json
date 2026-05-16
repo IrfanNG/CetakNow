@@ -1,0 +1,22 @@
+{
+  "name": "cetaknow-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CetakNow MVP - multi-tenant online printing order system",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "NODE_ENV=production node src/server.js",
+    "test": "npm run test:unit",
+    "cleanup": "node src/cleanup.js",
+    "test:unit": "node --test",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:e2e"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
