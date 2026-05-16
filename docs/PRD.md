@@ -1,6 +1,8 @@
 # CetakNow MVP PRD
 
 ## MVP
+- SaaS landing page for shop owner acquisition.
+- Subscription interest lead form for manual onboarding.
 - Multi-tenant shop pages by slug.
 - PDF-only upload with page count detection.
 - Shop-specific pricing and minimum order.

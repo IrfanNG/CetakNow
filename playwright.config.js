@@ -6,14 +6,14 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: 'http://127.0.0.1:3100',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure'
   },
   webServer: {
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:3000/shop/qalamirma',
-    reuseExistingServer: !process.env.CI,
+    command: 'PORT=3100 npm run dev',
+    url: 'http://127.0.0.1:3100/shop/qalamirma',
+    reuseExistingServer: false,
     timeout: 10000
   },
   projects: [

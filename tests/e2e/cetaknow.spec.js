@@ -52,6 +52,34 @@ test.beforeEach(async () => {
   await resetDb();
 });
 
+test('landing page explains SaaS and captures shop subscription lead', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: /Tempahan Print Online/ })).toBeVisible();
+  await expect(page.getByText('RM99 setup sekali sahaja')).toBeVisible();
+  await expect(page.getByText('RM49/ bulan')).toBeVisible();
+  await expect(page.getByText('Paid Orders Only')).toBeVisible();
+  await expect(page.getByText('PDF Upload')).toBeVisible();
+  await expect(page.getByText('Dashboard Staff:')).toBeVisible();
+  await page.getByRole('link', { name: 'Daftar Sekarang' }).click();
+  await expect(page.locator('#subscribe')).toBeVisible();
+
+  await page.fill('input[name="owner_name"]', 'Aina Owner');
+  await page.fill('input[name="shop_name"]', 'Student Print Test');
+  await page.fill('input[name="phone"]', '60123450000');
+  await page.fill('input[name="email"]', 'owner@studentprint.test');
+  await page.fill('input[name="location"]', 'Near campus');
+  await page.selectOption('select[name="current_order_method"]', 'whatsapp');
+  await page.fill('textarea[name="message"]', 'Need less WhatsApp chaos');
+  await page.getByRole('button', { name: 'Submit interest' }).click();
+  await expect(page).toHaveURL('/subscribe/thanks');
+  await expect(page.getByText('we’ll contact you')).toBeVisible();
+
+  await login(page, 'owner@cetaknow.local');
+  await expect(page.getByRole('heading', { name: 'Subscription Leads' })).toBeVisible();
+  await expect(page.getByText('Student Print Test')).toBeVisible();
+  await expect(page.getByText('Aina Owner')).toBeVisible();
+});
+
 test('public shop page renders branding, pricing, and mobile-safe form basics', async ({ page }) => {
   await page.goto('/shop/qalamirma');
   await expect(page.getByRole('heading', { name: 'Qalam Irma Online Print Order' })).toBeVisible();

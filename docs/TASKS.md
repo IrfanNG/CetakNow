@@ -1,5 +1,8 @@
 # CetakNow Tasks
 
+- [x] SaaS landing page
+- [x] Subscription lead capture
+- [x] Super admin lead visibility
 - [x] Core SaaS structure
 - [x] Qalam Irma seeded tenant
 - [x] Public shop order page

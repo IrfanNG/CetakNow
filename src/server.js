@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, loginPage, mockPaymentPage, orderDetails, shopDashboard, shopPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, orderDetails, shopDashboard, shopPage, subscribeThanksPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -20,7 +20,9 @@ export async function app(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const db = await readDb();
 
-    if (req.method === 'GET' && url.pathname === '/') return redirect(res, '/shop/qalamirma');
+    if (req.method === 'GET' && url.pathname === '/') return send(res, 200, landingPage({ leadCount: db.subscription_leads?.length || 0 }));
+    if (req.method === 'POST' && url.pathname === '/subscribe') return await createSubscriptionLead(req, res);
+    if (req.method === 'GET' && url.pathname === '/subscribe/thanks') return send(res, 200, subscribeThanksPage());
     if (req.method === 'GET' && url.pathname === '/login') return send(res, 200, loginPage());
     if (req.method === 'POST' && url.pathname === '/login') return await handleLogin(req, res);
     if (req.method === 'GET' && url.pathname === '/logout') { logoutUser(req, res); return redirect(res, '/login'); }
@@ -68,6 +70,30 @@ async function handleLogin(req, res) {
   if (!user) return send(res, 401, loginPage('Invalid email or password'));
   loginUser(res, user);
   redirect(res, '/admin');
+}
+
+async function createSubscriptionLead(req, res) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    db.subscription_leads ||= [];
+    const required = ['owner_name', 'shop_name', 'phone', 'email', 'location'];
+    for (const field of required) {
+      if (!String(form[field] || '').trim()) throw Object.assign(new Error('Missing required lead field'), { status: 400 });
+    }
+    db.subscription_leads.push({
+      id: id('lead'),
+      owner_name: String(form.owner_name || '').trim(),
+      shop_name: String(form.shop_name || '').trim(),
+      phone: String(form.phone || '').trim(),
+      email: String(form.email || '').trim(),
+      location: String(form.location || '').trim(),
+      current_order_method: String(form.current_order_method || 'whatsapp').trim(),
+      message: String(form.message || '').trim(),
+      status: 'new',
+      created_at: nowIso()
+    });
+  });
+  redirect(res, '/subscribe/thanks');
 }
 
 function renderShop(res, db, slug, error = '') {
@@ -151,7 +177,7 @@ function renderConfirmation(res, db, orderCode) {
 function renderAdmin(req, res, db) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
-  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders }));
+  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, leads: db.subscription_leads || [] }));
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   send(res, 200, shopDashboard({ user, shop, orders }));
