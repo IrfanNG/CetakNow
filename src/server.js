@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, orderDetails, shopDashboard, shopPage, subscribeThanksPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, shopDashboard, shopPage, subscriptionConfirmationPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -21,8 +21,15 @@ export async function app(req, res) {
     const db = await readDb();
 
     if (req.method === 'GET' && url.pathname === '/') return send(res, 200, landingPage({ leadCount: db.subscription_leads?.length || 0 }));
-    if (req.method === 'POST' && url.pathname === '/subscribe') return await createSubscriptionLead(req, res);
-    if (req.method === 'GET' && url.pathname === '/subscribe/thanks') return send(res, 200, subscribeThanksPage());
+    if (req.method === 'POST' && url.pathname === '/subscriptions') return await createSubscription(req, res);
+    const subMockPayMatch = url.pathname.match(/^\/payment\/subscription\/mock\/([^/]+)$/);
+    if (req.method === 'GET' && subMockPayMatch) return renderMockSubscriptionPayment(res, db, subMockPayMatch[1]);
+    const subMockSuccessMatch = url.pathname.match(/^\/payment\/subscription\/mock\/([^/]+)\/success$/);
+    if (req.method === 'POST' && subMockSuccessMatch) return await completeMockSubscriptionPayment(res, subMockSuccessMatch[1]);
+    const subConfirmMatch = url.pathname.match(/^\/subscriptions\/([^/]+)\/confirmation$/);
+    if (req.method === 'GET' && subConfirmMatch) return renderSubscriptionConfirmation(res, db, subConfirmMatch[1]);
+    const subSetupMatch = url.pathname.match(/^\/subscriptions\/([^/]+)\/setup$/);
+    if (req.method === 'POST' && subSetupMatch) return await setupSubscriptionShop(req, res, subSetupMatch[1]);
     if (req.method === 'GET' && url.pathname === '/login') return send(res, 200, loginPage());
     if (req.method === 'POST' && url.pathname === '/login') return await handleLogin(req, res);
     if (req.method === 'GET' && url.pathname === '/logout') { logoutUser(req, res); return redirect(res, '/login'); }
@@ -72,28 +79,187 @@ async function handleLogin(req, res) {
   redirect(res, '/admin');
 }
 
-async function createSubscriptionLead(req, res) {
+async function createSubscription(req, res) {
   const form = await parseForm(req);
-  await tx(async (db) => {
-    db.subscription_leads ||= [];
-    const required = ['owner_name', 'shop_name', 'phone', 'email', 'location'];
-    for (const field of required) {
-      if (!String(form[field] || '').trim()) throw Object.assign(new Error('Missing required lead field'), { status: 400 });
-    }
-    db.subscription_leads.push({
-      id: id('lead'),
-      owner_name: String(form.owner_name || '').trim(),
-      shop_name: String(form.shop_name || '').trim(),
-      phone: String(form.phone || '').trim(),
-      email: String(form.email || '').trim(),
-      location: String(form.location || '').trim(),
-      current_order_method: String(form.current_order_method || 'whatsapp').trim(),
-      message: String(form.message || '').trim(),
-      status: 'new',
-      created_at: nowIso()
+  const plan = form.plan === 'annual' ? 'annual' : 'monthly';
+  const amount = plan === 'annual' ? 499 : 49;
+  const code = await tx(async (db) => {
+    db.subscriptions ||= [];
+    db.payments ||= [];
+    const email = String(form.email || '').trim();
+    const phone = String(form.phone || '').trim();
+    if (!email || !phone) throw Object.assign(new Error('Email and phone are required'), { status: 400 });
+    const createdAt = nowIso();
+    const subscriptionCode = `CN-SUB-${String(db.subscriptions.length + 1001).padStart(4, '0')}`;
+    const subscription = {
+      id: id('subscription'),
+      subscription_code: subscriptionCode,
+      plan,
+      plan_label: plan === 'annual' ? 'Pelan Tahunan' : 'Pelan Bulanan',
+      email,
+      phone,
+      amount,
+      payment_status: 'pending',
+      shop_id: null,
+      created_at: createdAt,
+      updated_at: createdAt
+    };
+    db.subscriptions.push(subscription);
+    db.payments.push({
+      id: id('payment'),
+      subscription_id: subscription.id,
+      order_id: null,
+      shop_id: null,
+      gateway_type: 'billplz_mock',
+      gateway_reference: `MOCK-${subscriptionCode}`,
+      amount,
+      status: 'pending',
+      paid_at: null,
+      raw_response: {},
+      created_at: createdAt,
+      updated_at: createdAt
     });
+    return subscriptionCode;
   });
-  redirect(res, '/subscribe/thanks');
+  redirect(res, `/payment/subscription/mock/${code}`);
+}
+
+function renderMockSubscriptionPayment(res, db, code) {
+  const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
+  if (!subscription) return notFound(res);
+  send(res, 200, mockSubscriptionPaymentPage(subscription));
+}
+
+async function completeMockSubscriptionPayment(res, code) {
+  await tx(async (db) => {
+    const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
+    if (!subscription) throw Object.assign(new Error('Subscription not found'), { status: 404 });
+    const payment = db.payments.find((p) => p.subscription_id === subscription.id);
+    if (!payment) throw new Error('Payment not found');
+    if (payment.status !== 'paid') {
+      const paidAt = nowIso();
+      payment.status = 'paid';
+      payment.paid_at = paidAt;
+      payment.raw_response = { mock: true };
+      payment.updated_at = paidAt;
+      subscription.payment_status = 'paid';
+      subscription.updated_at = paidAt;
+    }
+  });
+  redirect(res, `/subscriptions/${code}/confirmation`);
+}
+
+function renderSubscriptionConfirmation(res, db, code) {
+  const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
+  if (!subscription || subscription.payment_status !== 'paid') return notFound(res);
+  const shop = subscription.shop_id ? db.shops.find((s) => s.id === subscription.shop_id) : null;
+  send(res, 200, subscriptionConfirmationPage(subscription, shop));
+}
+
+async function setupSubscriptionShop(req, res, code) {
+  const form = await parseForm(req);
+  const slugBase = slugify(form.slug || form.shop_name);
+  if (!String(form.shop_name || '').trim()) throw Object.assign(new Error('Nama kedai diperlukan'), { status: 400 });
+  if (!slugBase) throw Object.assign(new Error('Slug kedai tidak sah'), { status: 400 });
+
+  await tx(async (db) => {
+    const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
+    if (!subscription || subscription.payment_status !== 'paid') throw Object.assign(new Error('Subscription not found'), { status: 404 });
+    const existingShop = subscription.shop_id ? db.shops.find((s) => s.id === subscription.shop_id) : null;
+    if (existingShop) return existingShop.slug;
+
+    db.shops ||= [];
+    db.shop_pricing ||= [];
+    db.pickup_slots ||= [];
+    const createdAt = nowIso();
+    const uniqueSlug = uniqueShopSlug(db, slugBase);
+    const shopName = String(form.shop_name || '').trim();
+    const shop = {
+      id: id('shop'),
+      name: shopName,
+      slug: uniqueSlug,
+      shop_code: shopCode(shopName, db.shops.length + 1),
+      logo_url: '',
+      primary_color: '#062b66',
+      description: `Upload PDF, pilih tetapan print, bayar online, dan ambil dokumen anda di ${shopName}.`,
+      address: String(form.address || '').trim(),
+      google_maps_url: 'https://maps.google.com/',
+      phone: String(form.phone || subscription.phone || '').trim(),
+      email: subscription.email,
+      operating_hours: String(form.operating_hours || '').trim(),
+      minimum_order_amount: positiveMoney(form.minimum_order_amount, 5),
+      is_active: true,
+      plan: subscription.plan,
+      subscription_status: 'active',
+      created_at: createdAt,
+      updated_at: createdAt
+    };
+    db.shops.push(shop);
+    db.shop_pricing.push({
+      id: id('pricing'),
+      shop_id: shop.id,
+      a4_bw_price_per_page: positiveMoney(form.a4_bw_price_per_page, 0.2),
+      a4_color_price_per_page: positiveMoney(form.a4_color_price_per_page, 1),
+      created_at: createdAt,
+      updated_at: createdAt
+    });
+    for (const day of [1, 2, 3, 4, 5, 6]) {
+      for (const [index, [start, end]] of [['09:00', '10:00'], ['10:00', '11:00'], ['11:00', '12:00']].entries()) {
+        db.pickup_slots.push({
+          id: id('slot'),
+          shop_id: shop.id,
+          day_of_week: day,
+          start_time: start,
+          end_time: end,
+          max_orders: 5,
+          is_active: true,
+          created_at: createdAt,
+          updated_at: createdAt
+        });
+      }
+    }
+    subscription.shop_id = shop.id;
+    subscription.updated_at = createdAt;
+    return shop.slug;
+  });
+  redirect(res, `/subscriptions/${code}/confirmation`);
+}
+
+function slugify(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
+
+function uniqueShopSlug(db, base) {
+  let slug = base;
+  let counter = 2;
+  while (db.shops.some((shop) => shop.slug === slug)) {
+    slug = `${base}-${counter}`;
+    counter += 1;
+  }
+  return slug;
+}
+
+function positiveMoney(value, fallback) {
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount) || amount < 0) return fallback;
+  return Math.round(amount * 100) / 100;
+}
+
+function shopCode(name, index) {
+  const initials = String(name || '')
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase()
+    .slice(0, 3);
+  return initials || `CN${index}`;
 }
 
 function renderShop(res, db, slug, error = '') {
@@ -177,7 +343,7 @@ function renderConfirmation(res, db, orderCode) {
 function renderAdmin(req, res, db) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
-  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, leads: db.subscription_leads || [] }));
+  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [] }));
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   send(res, 200, shopDashboard({ user, shop, orders }));

@@ -11,7 +11,7 @@ export function landingPage({ leadCount = 0 } = {}) {
   <main class="landing landing-blueprint">
     <nav class="quote-nav">
       <a class="quote-logo" href="/" aria-label="CetakNow home"><img src="/public/assets/primary-logo.png" alt="CetakNow"></a>
-      <div class="quote-links"><a href="#home">Home</a><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#solution">Penyelesaian</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a><a class="login-pill" href="/login">Log Masuk</a></div>
+      <div class="quote-links"><a href="#home">Home</a><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#solution">Penyelesaian</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a><a class="nav-subscribe" href="#pricing">Daftar</a><a class="login-pill" href="/login">Log Masuk</a></div>
     </nav>
 
     <section id="home" class="quote-hero section-red section-blue">
@@ -19,7 +19,7 @@ export function landingPage({ leadCount = 0 } = {}) {
       <p class="quote-kicker">Platform tempahan print online</p>
       <h1>Tempahan Print Online<br><span>Mudah & Tersusun</span></h1>
       <p class="quote-subtitle">Bantu kedai print terima fail PDF, kira harga, ambil bayaran, dan susun pickup tanpa mesej WhatsApp berselerak.</p>
-      <div class="hero-mini-links"><span>✓ PDF Upload</span><span>✓ Bayar Dahulu</span><span>✓ Pickup Slot</span></div>
+      <div class="hero-mini-links"><span>✓ Upload PDF</span><span>✓ Bayar Dahulu</span><span>✓ Slot Pickup</span></div>
       <a class="scroll-cue" href="#about" aria-label="Scroll to about">↓</a>
     </section>
 
@@ -54,40 +54,78 @@ export function landingPage({ leadCount = 0 } = {}) {
 
     <section id="how" class="quote-section dark">
       <div class="center-copy"><h2>Macam Mana Ia Berfungsi?</h2></div>
-      <div class="quote-card-grid three steps-clean"><article><span>1</span><h3>Daftar & Setup</h3><p>Kami setup page kedai, harga, minimum order, dan slot pickup.</p></article><article><span>2</span><h3>Kongsi Link</h3><p>Letak link CetakNow di WhatsApp, bio media sosial, atau poster kedai.</p></article><article><span>3</span><h3>Terima Order</h3><p>Pelanggan upload PDF, bayar, dan order masuk ke dashboard staff.</p></article></div>
+      <div class="quote-card-grid three steps-clean"><article><span>1</span><h3>Langgan & Bayar</h3><p>Pilih pelan bulanan atau tahunan, isi email dan telefon, kemudian buat bayaran online.</p></article><article><span>2</span><h3>Setup Page Sendiri</h3><p>Selepas bayar, owner setup sendiri nama kedai, harga print, minimum order, waktu operasi, dan kawasan pickup.</p></article><article><span>3</span><h3>Auto Dapat Link Kedai</h3><p>CetakNow terus jana link kedai khas untuk dikongsi di WhatsApp, bio media sosial, atau poster kedai.</p></article></div>
     </section>
 
     <section class="quote-section security-band section-blue center-copy">
-      <div class="lock-icon">⌂</div><h2>Privasi & Keselamatan Fail</h2><p>Fail PDF tidak dipaparkan secara public. Staff hanya akses melalui dashboard, dan fail dipadam automatik selepas 7 hari.</p><div class="security-tags"><span>Data Protected</span><span>Private Uploads</span><span>7-Day Cleanup</span></div>
+      <div class="lock-icon">⌂</div><h2>Privasi & Keselamatan Fail</h2><p>Fail PDF tidak dipaparkan secara umum. Staff hanya akses melalui dashboard, dan fail dipadam automatik selepas 7 hari.</p><div class="security-tags"><span>Fail Dilindungi</span><span>Upload Peribadi</span><span>Padam Selepas 7 Hari</span></div>
     </section>
 
     <section id="pricing" class="quote-section white pricing-zone">
       <div class="center-copy"><p class="quote-kicker">Harga</p><h2>Harga Telus & Mudah</h2><p>Tiada sistem rumit. Sesuai untuk validasi awal kedai print.</p></div>
       <div class="pricing-cards">
-        <article class="pricing-card"><h3>Pelan Bulanan</h3><p>Sesuai mula kecil</p><div class="price">RM49<span>/ bulan</span></div><ul class="tick-list"><li>RM99 setup sekali sahaja</li><li>Link kedai sendiri</li><li>Dashboard order</li><li>Pickup slot asas</li></ul><a class="quote-button outline-blue" href="#subscribe">Langgan Bulanan</a></article>
-        <article class="pricing-card featured"><div class="popular-ribbon">Paling Popular</div><h3>Pelan Tahunan</h3><p>Jimat untuk kedai aktif</p><div class="price">RM499<span>/ tahun</span></div><ul class="tick-list"><li>Semua fungsi pelan bulanan</li><li>Nilai lebih jimat</li><li>Setup dibincang semasa onboarding</li><li>Priority manual support</li></ul><a class="quote-button solid-blue" href="#subscribe">Pilih Tahunan</a></article>
+        <article class="pricing-card"><h3>Pelan Bulanan</h3><p>Sesuai mula kecil</p><div class="price">RM49<span>/ bulan</span></div><ul class="tick-list"><li>Link kedai sendiri</li><li>Dashboard order</li><li>Bayaran online</li><li>Fail dipadam automatik</li></ul><a class="quote-button outline-blue plan-trigger" href="#subscription-checkout" data-plan="monthly" data-plan-label="Pelan Bulanan" data-amount="49">Langgan Bulanan</a></article>
+        <article class="pricing-card featured"><div class="popular-ribbon">Paling Popular</div><h3>Pelan Tahunan</h3><p>Jimat untuk kedai aktif</p><div class="price">RM499<span>/ tahun</span></div><ul class="tick-list"><li>Semua fungsi pelan bulanan</li><li>Nilai lebih jimat</li><li>Sokongan manual diutamakan</li><li>Fail dipadam automatik</li></ul><a class="quote-button solid-blue plan-trigger" href="#subscription-checkout" data-plan="annual" data-plan-label="Pelan Tahunan" data-amount="499">Pilih Tahunan</a></article>
       </div>
-      <p class="pricing-note">Onboarding dan langganan masih diurus secara manual untuk MVP.</p>
+      <p class="pricing-note">Harga langganan tetap. Isi email dan telefon, kemudian teruskan bayaran.</p>
     </section>
 
-    <section class="quote-section final-cta dark center-copy"><h2>Tunggu Apa Lagi?</h2><p>Bina sistem order yang lebih kemas, kurangkan kerja manual, dan mudahkan pelanggan hantar fail print.</p><a class="quote-button white" href="#subscribe">Daftar Sekarang</a><small>${leadCount} shop leads direkodkan setakat ini</small></section>
-
-    <section id="subscribe" class="quote-section white subscribe-wrap">
-      <div><p class="quote-kicker">Untuk Owner Kedai</p><h2>Daftar Minat Kedai Anda</h2><p>Isi maklumat ringkas. Kami akan hubungi anda untuk setup page CetakNow secara manual bagi fasa MVP.</p></div>
-      <form class="form lead-form" method="post" action="/subscribe">
-        <div class="two"><label>Nama owner <input required name="owner_name"></label><label>Nama kedai <input required name="shop_name"></label></div>
-        <div class="two"><label>Telefon <input required name="phone" placeholder="60123456789"></label><label>Email <input required type="email" name="email"></label></div>
-        <label>Lokasi / kawasan <input required name="location" placeholder="Dekat kampus, mall, taman..."></label>
-        <label>Kaedah order sekarang <select name="current_order_method"><option value="whatsapp">WhatsApp</option><option value="walk_in">Walk-in sahaja</option><option value="google_form">Google Form</option><option value="other">Lain-lain</option></select></label>
-        <label>Mesej optional <textarea name="message" placeholder="Ceritakan workflow print sekarang"></textarea></label>
-        <button>Submit Interest</button>
+    <section id="subscription-checkout" class="subscription-modal" aria-hidden="true">
+      <a class="subscription-backdrop" href="#pricing" aria-label="Tutup checkout"></a>
+      <form class="subscription-dialog" method="post" action="/subscriptions">
+        <div class="subscription-head"><h2>Langgan CetakNow</h2><p><span class="modal-plan-label">Pelan Bulanan</span></p></div>
+        <div class="subscription-body">
+          <input type="hidden" name="plan" value="monthly">
+          <label>Email * <input required type="email" name="email" placeholder="email@contoh.com" autocomplete="email"></label>
+          <label>Nombor Telefon * <input required name="phone" inputmode="tel" autocomplete="tel" pattern="[0-9+ ]{9,16}" placeholder="0123456789"></label>
+          <div class="subscription-total"><span>Harga Pelan</span><b>RM<span class="modal-plan-amount">49</span></b></div>
+          <button>Teruskan Pembayaran</button>
+          <a class="cancel-subscription" href="#pricing">Batal</a>
+        </div>
       </form>
     </section>
+
+    <footer class="quote-section final-cta footer-cta dark">
+      <div class="footer-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><p>Platform tempahan print online untuk kedai kecil yang mahu order lebih kemas, bayaran jelas, dan pickup lebih tersusun.</p></div>
+      <div class="footer-main"><p class="quote-kicker">Langgan CetakNow</p><h2>Sedia susun order print kedai anda?</h2><p>Bawa pelanggan dari WhatsApp berselerak ke satu sistem order yang lebih mudah dikawal.</p><div class="footer-actions"><a class="quote-button white" href="#pricing">Daftar Sekarang</a><a class="footer-login" href="/login">Log Masuk Admin</a></div></div>
+      <div class="footer-trust"><span>Bayaran online</span><span>Fail dipadam automatik</span><span>Dashboard order</span></div>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a></nav>
+      <p class="footer-bottom">© 2026 CetakNow. Print Online, Pay Online, Pick Up Easy.</p>
+    </footer>
+
+    <script>
+      const subscriptionModal = document.querySelector('#subscription-checkout');
+      const subscriptionForm = document.querySelector('.subscription-dialog');
+      const planInput = subscriptionForm?.querySelector('input[name="plan"]');
+      const planLabel = document.querySelector('.modal-plan-label');
+      const planAmount = document.querySelector('.modal-plan-amount');
+      const paymentButton = subscriptionForm?.querySelector('button');
+      function syncSubscriptionModal() {
+        const isOpen = location.hash === '#subscription-checkout';
+        subscriptionModal?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      }
+      document.querySelectorAll('.plan-trigger').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          if (planInput) planInput.value = trigger.dataset.plan || 'monthly';
+          if (planLabel) planLabel.textContent = trigger.dataset.planLabel || 'Pelan Bulanan';
+          if (planAmount) planAmount.textContent = trigger.dataset.amount || '49';
+          setTimeout(syncSubscriptionModal, 0);
+        });
+      });
+      window.addEventListener('hashchange', syncSubscriptionModal);
+      syncSubscriptionModal();
+      subscriptionForm?.addEventListener('submit', () => {
+        if (!subscriptionForm.checkValidity()) return;
+        paymentButton.disabled = true;
+        paymentButton.textContent = 'Menghantar...';
+      });
+    </script>
+
   </main>`);
 }
 
 export function subscribeThanksPage() {
-  return layout('Thanks - CetakNow', `<main class="page narrow"><section class="card success"><p class="eyebrow">Lead received</p><h1>Thanks — we’ll contact you to set up your CetakNow shop.</h1><p>Terima kasih. Team CetakNow akan hubungi anda untuk setup kedai secara manual bagi MVP.</p><a class="button" href="/">Back to landing page</a></section></main>`);
+  return layout('Terima Kasih - CetakNow', `<main class="page narrow"><section class="card success"><p class="eyebrow">Minat diterima</p><h1>Terima kasih, kami akan hubungi anda untuk setup CetakNow.</h1><p>Team CetakNow akan semak maklumat kedai dan hubungi anda untuk setup manual bagi fasa MVP.</p><a class="button" href="/">Kembali ke landing page</a></section></main>`);
 }
 
 export function shopPage({ shop, pricing, slots, error = '' }) {
@@ -176,14 +214,77 @@ export function orderDetails({ order, shop, slot }) {
   return layout(order.order_code, `<main class="page narrow"><section class="card"><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p><div class="receipt"><p>Pages: ${order.page_count}</p><p>Type: ${order.print_type}</p><p>Sides: ${order.sides}</p><p>Copies: ${order.copies}</p><p>Notes: ${order.notes ? escapeHtml(order.notes) : '-'}</p><p>Pickup: ${order.pickup_date}, ${labelSlot(slot)}</p><p>Total: ${formatMoney(order.total_amount)}</p><p>File delete at: ${new Date(order.file_delete_at).toLocaleString()}</p></div><p><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a></p><form method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form><p><a href="/admin">Back</a></p></section></main>`, shop.primary_color);
 }
 
-export function superDashboard({ shops, orders, leads = [] }) {
+export function superDashboard({ shops, orders, subscriptions = [] }) {
   const rows = shops.map((s) => `<tr><td>${escapeHtml(s.name)}</td><td>${s.slug}</td><td>${s.is_active ? 'Active' : 'Inactive'}</td><td>${s.plan}</td><td>${s.subscription_status}</td><td>${orders.filter((o) => o.shop_id === s.id).length}</td><td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`).join('');
-  const leadRows = leads.map((lead) => `<tr><td>${escapeHtml(lead.shop_name)}</td><td>${escapeHtml(lead.owner_name)}</td><td>${escapeHtml(lead.phone)}</td><td>${escapeHtml(lead.email)}</td><td>${escapeHtml(lead.location)}</td><td>${escapeHtml(lead.current_order_method)}</td><td>${escapeHtml(lead.status)}</td><td>${new Date(lead.created_at).toLocaleString()}</td></tr>`).join('');
-  return layout('Super Admin', `<main class="page"><nav class="nav"><b>CetakNow Super Admin</b><a href="/logout">Logout</a></nav><section class="metrics"><div class="card"><b>${shops.length}</b><span>Shops</span></div><div class="card"><b>${orders.length}</b><span>Orders</span></div><div class="card"><b>${orders.filter((o) => o.payment_status === 'paid').length}</b><span>Paid</span></div><div class="card"><b>${leads.length}</b><span>Leads</span></div></section><section class="card"><h1>Shops</h1><table><thead><tr><th>Shop</th><th>Slug</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></section><section class="card lead-table"><h1>Subscription Leads</h1><table><thead><tr><th>Shop</th><th>Owner</th><th>Phone</th><th>Email</th><th>Location</th><th>Method</th><th>Status</th><th>Created</th></tr></thead><tbody>${leadRows || '<tr><td colspan="8">No leads yet.</td></tr>'}</tbody></table></section></main>`);
+  const subscriptionRows = subscriptions.map((sub) => {
+    const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
+    const shopCell = shop ? `<a href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
+    return `<tr><td>${escapeHtml(sub.subscription_code)}</td><td>${escapeHtml(sub.plan_label)}</td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td>${escapeHtml(sub.payment_status)}</td><td>${shopCell}</td><td>${new Date(sub.created_at).toLocaleString()}</td></tr>`;
+  }).join('');
+  return layout('Super Admin', `<main class="page"><nav class="nav"><b>CetakNow Super Admin</b><a href="/logout">Logout</a></nav><section class="metrics"><div class="card"><b>${shops.length}</b><span>Shops</span></div><div class="card"><b>${orders.length}</b><span>Orders</span></div><div class="card"><b>${orders.filter((o) => o.payment_status === 'paid').length}</b><span>Paid Orders</span></div><div class="card"><b>${subscriptions.filter((s) => s.payment_status === 'paid').length}</b><span>Paid Subscriptions</span></div></section><section class="card"><h1>Shops</h1><table><thead><tr><th>Shop</th><th>Slug</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></section><section class="card lead-table"><h1>Subscriptions</h1><table><thead><tr><th>Code</th><th>Plan</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead><tbody>${subscriptionRows || '<tr><td colspan="8">No subscriptions yet.</td></tr>'}</tbody></table></section></main>`);
 }
 
 export function mockPaymentPage(order) {
   return layout('Mock Billplz', `<main class="page narrow"><section class="card"><p class="eyebrow">Billplz Mock</p><h1>Pay ${formatMoney(order.total_amount)}</h1><p>Order ${order.order_code}</p><form method="post" action="/payment/mock/${order.order_code}/success"><button>Simulate successful payment</button></form></section></main>`);
+}
+
+export function mockSubscriptionPaymentPage(subscription) {
+  return layout('Mock Billplz Subscription', `<main class="page narrow"><section class="card"><p class="eyebrow">Billplz Mock</p><h1>Pay ${formatMoney(subscription.amount)}</h1><p>${escapeHtml(subscription.plan_label)} · ${escapeHtml(subscription.subscription_code)}</p><p>${escapeHtml(subscription.email)} · ${escapeHtml(subscription.phone)}</p><form method="post" action="/payment/subscription/mock/${subscription.subscription_code}/success"><button>Simulate successful payment</button></form></section></main>`);
+}
+
+export function subscriptionConfirmationPage(subscription, shop = null) {
+  if (shop) {
+    return layout('Link kedai siap - CetakNow', `<main class="page narrow setup-page"><section class="card success setup-success"><p class="eyebrow">Page kedai siap</p><h1>Link CetakNow kedai anda sudah dijana.</h1><p>Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan.</p><div class="receipt shop-link-receipt"><p>Nama kedai: <b>${escapeHtml(shop.name)}</b></p><p>Link kedai: <a href="/shop/${escapeHtml(shop.slug)}"><b>/shop/${escapeHtml(shop.slug)}</b></a></p><p>Pelan: <b>${escapeHtml(subscription.plan_label)}</b></p></div><div class="setup-actions"><a class="button" href="/shop/${escapeHtml(shop.slug)}">Buka Page Kedai</a><a class="button ghost" href="/">Kembali ke landing page</a></div></section></main>`, shop.primary_color);
+  }
+
+  return layout('Setup kedai - CetakNow', `<main class="page setup-page">
+    <section class="setup-hero card">
+      <div><p class="eyebrow">Payment successful</p><h1>Langganan berjaya. Sekarang setup page kedai anda.</h1><p>Isi maklumat minimum dahulu. Selepas submit, CetakNow terus jana link kedai untuk pelanggan buat order.</p></div>
+      <div class="setup-plan"><span>${escapeHtml(subscription.plan_label)}</span><b>${formatMoney(subscription.amount)}</b><small>${escapeHtml(subscription.subscription_code)}</small></div>
+    </section>
+    <section class="setup-grid">
+      <form class="card form shop-setup-form" method="post" action="/subscriptions/${escapeHtml(subscription.subscription_code)}/setup">
+        <h2>Maklumat kedai</h2>
+        <label>Nama kedai * <input required name="shop_name" autocomplete="organization" placeholder="Contoh: Student Print Seksyen 7"></label>
+        <label>Slug link kedai * <input required name="slug" pattern="[a-z0-9-]{3,64}" placeholder="student-print-seksyen-7" aria-describedby="slug-help"><small id="slug-help" class="muted">Link akan jadi /shop/<span class="slug-preview">nama-kedai</span></small></label>
+        <div class="two"><label>Telefon kedai * <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"></label><label>Waktu operasi * <input required name="operating_hours" placeholder="Mon-Sat, 9:00 AM - 9:00 PM"></label></div>
+        <label>Alamat / kawasan * <textarea required name="address" placeholder="Dekat kampus, mall, taman..."></textarea></label>
+        <div class="two"><label>Harga B/W A4 per page * <input required type="number" min="0" step="0.01" name="a4_bw_price_per_page" value="0.20"></label><label>Harga color A4 per page * <input required type="number" min="0" step="0.01" name="a4_color_price_per_page" value="1.00"></label></div>
+        <label>Minimum order online * <input required type="number" min="0" step="0.01" name="minimum_order_amount" value="5.00"></label>
+        <button>Jana Link Kedai</button>
+        <p class="form-reassurance">Slot pickup asas akan disediakan automatik dan boleh dikemas kini kemudian.</p>
+      </form>
+      <aside class="card setup-preview">
+        <p class="eyebrow">Preview link</p>
+        <h2>/shop/<span class="slug-preview">nama-kedai</span></h2>
+        <p>Page ini akan terima PDF, kira harga, ambil bayaran online, dan simpan order dalam dashboard staff.</p>
+        <ul class="tick-list"><li>Link kedai sendiri</li><li>Bayaran online</li><li>Dashboard order</li><li>Fail dipadam automatik</li></ul>
+      </aside>
+    </section>
+    <script>
+      const shopNameInput = document.querySelector('input[name="shop_name"]');
+      const slugInput = document.querySelector('input[name="slug"]');
+      const previews = document.querySelectorAll('.slug-preview');
+      let slugTouched = false;
+      function toSlug(value) {
+        return String(value || '').toLowerCase().trim().replace(/['"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+      }
+      function syncSlugPreview() {
+        const slug = toSlug(slugInput?.value) || 'nama-kedai';
+        previews.forEach((preview) => preview.textContent = slug);
+      }
+      shopNameInput?.addEventListener('input', () => {
+        if (!slugTouched && slugInput) slugInput.value = toSlug(shopNameInput.value);
+        syncSlugPreview();
+      });
+      slugInput?.addEventListener('input', () => {
+        slugTouched = true;
+        slugInput.value = toSlug(slugInput.value);
+        syncSlugPreview();
+      });
+      syncSlugPreview();
+    </script>
+  </main>`);
 }
 
 function dayName(index) {

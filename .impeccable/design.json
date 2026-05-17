@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-17T00:00:00.000Z",
+  "title": "Design System: CetakNow",
+  "extensions": {
+    "colorMeta": {
+      "navy": { "role": "primary", "displayName": "Counter Navy", "canonical": "#062b66", "tonalRamp": ["#f7fbff", "#eaf4ff", "#0b4f9f", "#062b66", "#071426"] },
+      "yellow": { "role": "primary-action", "displayName": "Action Yellow", "canonical": "#ffc20a", "tonalRamp": ["#fff4c7", "#ffd35a", "#ffc20a", "#f3b800"] },
+      "ice": { "role": "surface", "displayName": "Print Ice", "canonical": "#eaf4ff", "tonalRamp": ["#ffffff", "#f7fbff", "#e8f4ff", "#d7ecff"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines only, tight and confident." },
+      "headline": { "displayName": "Headline", "purpose": "Major section titles and conversion blocks." },
+      "body": { "displayName": "Body", "purpose": "BM-first explanatory copy with 65-75ch max line length." },
+      "label": { "displayName": "Kicker Label", "purpose": "Short uppercase section labels, not decorative repetition." }
+    },
+    "shadows": [
+      { "name": "card-soft-lift", "value": "0 18px 55px rgba(15,23,42,.06)", "purpose": "White cards on light surfaces." },
+      { "name": "dark-section-card-lift", "value": "0 18px 55px rgba(0,0,0,.12)", "purpose": "White cards on navy bands." },
+      { "name": "cta-glow", "value": "0 16px 36px rgba(255,194,10,.24)", "purpose": "Primary acquisition CTA only." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150-220ms ease-out", "purpose": "Hover, focus, and small interaction transitions." },
+      { "name": "reduced-motion", "value": "respect prefers-reduced-motion", "purpose": "Avoid motion reliance for comprehension." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "620px" },
+      { "name": "tablet", "value": "920px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Acquisition Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Use for Daftar, Daftar Sekarang, and high-intent owner actions.",
+      "html": "<a class=\"ds-button-primary\" href=\"#subscribe\">Daftar</a>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 25px;border-radius:999px;background:#ffc20a;color:#08172a;border:1px solid rgba(255,194,10,.92);font:950 .98rem/1 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:none;box-shadow:0 16px 36px rgba(255,194,10,.24),inset 0 1px 0 rgba(255,255,255,.36)}.ds-button-primary:hover{background:#ffd35a;transform:translateY(-1px)}.ds-button-primary:focus-visible{outline:3px solid rgba(255,194,10,.78);outline-offset:3px}"
+    },
+    {
+      "name": "Marketing Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Use for concise problem or step content. Avoid repeated identical grids when a flow visual is better.",
+      "html": "<article class=\"ds-card\"><span class=\"ds-icon\">✓</span><h3>Bayar Dahulu</h3><p>Order diproses selepas bayaran untuk kurangkan risiko kerja sia-sia.</p></article>",
+      "css": ".ds-card{background:#fff;color:#142033;border:1px solid #e2e8f0;border-radius:12px;padding:28px;box-shadow:0 18px 55px rgba(15,23,42,.06);font-family:Inter,ui-sans-serif,system-ui,sans-serif}.ds-card h3{margin:14px 0 10px;font-size:1.08rem;line-height:1.2}.ds-card p{margin:0;color:#64748b;line-height:1.65;font-weight:650}.ds-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:999px;background:#fff4c7;color:#062b66;font-weight:950}"
+    },
+    {
+      "name": "Lead Form Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Use for owner lead capture and admin forms.",
+      "html": "<label class=\"ds-field\">Telefon <input required inputmode=\"tel\" placeholder=\"60123456789\"></label>",
+      "css": ".ds-field{display:grid;gap:7px;margin:12px 0;color:#142033;font:800 1rem/1.2 Inter,ui-sans-serif,system-ui,sans-serif}.ds-field input{width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:12px;background:#fff;color:#142033;font:inherit}.ds-field input:focus-visible{outline:3px solid rgba(255,194,10,.78);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Order Counter",
+    "overview": "CetakNow should feel like a clean, reliable print-shop counter where every file, payment, and pickup slot has a clear place. The visual system is local, trustworthy, and efficient.",
+    "keyCharacteristics": ["Navy and yellow brand contrast", "BM-first owner-facing copy", "Visible Daftar / Daftar Sekarang CTA", "Operational dark trust bands", "Mobile owner speed"],
+    "rules": [
+      { "name": "The Yellow Means Action Rule", "body": "Yellow is reserved for conversion, selection, and progress signals.", "section": "colors" },
+      { "name": "The Owner Reads Fast Rule", "body": "Use short BM-first sentences. Rewrite startup jargon into shop-owner language.", "section": "typography" },
+      { "name": "The Counter Surface Rule", "body": "Surfaces lift just enough to separate from the counter. No dramatic glass or neon glow.", "section": "elevation" }
+    ],
+    "dos": ["Do keep Daftar and Daftar Sekarang dominant.", "Do use navy for trust and yellow for action.", "Do write BM-first copy.", "Do show concrete order flow."],
+    "donts": ["Don't use generic SaaS template visuals.", "Don't use over-corporate fintech styling.", "Don't make English-first copy the default.", "Don't let Log Masuk compete with Daftar or Daftar Sekarang."]
+  }
+}

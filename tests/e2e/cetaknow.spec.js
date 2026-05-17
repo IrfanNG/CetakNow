@@ -52,32 +52,65 @@ test.beforeEach(async () => {
   await resetDb();
 });
 
-test('landing page explains SaaS and captures shop subscription lead', async ({ page }) => {
+test('landing page explains SaaS and routes CTAs to pricing', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Tempahan Print Online/ })).toBeVisible();
-  await expect(page.getByText('RM99 setup sekali sahaja')).toBeVisible();
+  await expect(page.locator('#pricing').getByText('Bayaran online')).toBeVisible();
   await expect(page.getByText('RM49/ bulan')).toBeVisible();
   await expect(page.getByText('Paid Orders Only')).toBeVisible();
-  await expect(page.getByText('PDF Upload')).toBeVisible();
+  await expect(page.locator('.hero-mini-links').getByText('Upload PDF')).toBeVisible();
   await expect(page.getByText('Dashboard Staff:')).toBeVisible();
-  await page.getByRole('link', { name: 'Daftar Sekarang' }).click();
-  await expect(page.locator('#subscribe')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Setup Page Sendiri' })).toBeVisible();
+  await expect(page.getByText('owner setup sendiri nama kedai')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Auto Dapat Link Kedai' })).toBeVisible();
 
-  await page.fill('input[name="owner_name"]', 'Aina Owner');
-  await page.fill('input[name="shop_name"]', 'Student Print Test');
-  await page.fill('input[name="phone"]', '60123450000');
+  await page.getByRole('link', { name: 'Daftar', exact: true }).click();
+  await expect(page.locator('#pricing')).toBeInViewport();
+
+  await page.getByRole('link', { name: 'Daftar Sekarang' }).click();
+  await expect(page.locator('#pricing')).toBeInViewport();
+
+  await expect(page.getByRole('heading', { name: 'Sedia susun order print kedai anda?' })).toBeVisible();
+  await expect(page.locator('.footer-trust').getByText('Bayaran online')).toBeVisible();
+  await expect(page.locator('.footer-trust').getByText('Fail dipadam automatik')).toBeVisible();
+  await expect(page.locator('.footer-trust').getByText('Dashboard order')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log Masuk Admin' })).toHaveAttribute('href', '/login');
+});
+
+
+test('shop owner can subscribe and pay from pricing modal', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Pilih Tahunan' }).click();
+  await expect(page.locator('#subscription-checkout')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.getByText('Pelan Tahunan').last()).toBeVisible();
+  await expect(page.getByText('RM499').last()).toBeVisible();
+
   await page.fill('input[name="email"]', 'owner@studentprint.test');
-  await page.fill('input[name="location"]', 'Near campus');
-  await page.selectOption('select[name="current_order_method"]', 'whatsapp');
-  await page.fill('textarea[name="message"]', 'Need less WhatsApp chaos');
-  await page.getByRole('button', { name: 'Submit interest' }).click();
-  await expect(page).toHaveURL('/subscribe/thanks');
-  await expect(page.getByText('we’ll contact you')).toBeVisible();
+  await page.fill('input[name="phone"]', '60123450000');
+  await page.getByRole('button', { name: 'Teruskan Pembayaran' }).click();
+  await expect(page).toHaveURL(/\/payment\/subscription\/mock\/CN-SUB-1001/);
+  await expect(page.getByText('Pay RM499.00')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Simulate successful payment' }).click();
+  await expect(page).toHaveURL(/\/subscriptions\/CN-SUB-1001\/confirmation/);
+  await expect(page.getByText('Sekarang setup page kedai anda.')).toBeVisible();
+  await page.fill('input[name="shop_name"]', 'Student Print Test');
+  await expect(page.locator('input[name="slug"]')).toHaveValue('student-print-test');
+  await page.fill('input[name="operating_hours"]', 'Mon-Sat, 9:00 AM - 8:00 PM');
+  await page.fill('textarea[name="address"]', 'Kawasan kampus test');
+  await page.getByRole('button', { name: 'Jana Link Kedai' }).click();
+  await expect(page).toHaveURL(/\/subscriptions\/CN-SUB-1001\/confirmation/);
+  await expect(page.getByText('Link CetakNow kedai anda sudah dijana.')).toBeVisible();
+  await expect(page.getByRole('link', { name: '/shop/student-print-test' })).toHaveAttribute('href', '/shop/student-print-test');
+  await page.goto('/shop/student-print-test');
+  await expect(page.getByRole('heading', { name: 'Student Print Test Online Print Order' })).toBeVisible();
+  await expect(page.getByText('A4 B/W: RM0.20 / page')).toBeVisible();
 
   await login(page, 'owner@cetaknow.local');
-  await expect(page.getByRole('heading', { name: 'Subscription Leads' })).toBeVisible();
-  await expect(page.getByText('Student Print Test')).toBeVisible();
-  await expect(page.getByText('Aina Owner')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Subscriptions' })).toBeVisible();
+  await expect(page.getByText('CN-SUB-1001')).toBeVisible();
+  await expect(page.getByText('owner@studentprint.test')).toBeVisible();
+  await expect(page.getByText('RM499.00')).toBeVisible();
 });
 
 test('public shop page renders branding, pricing, and mobile-safe form basics', async ({ page }) => {
@@ -162,7 +195,7 @@ test('super admin sees SaaS metrics and Qalam Irma tenant', async ({ page }) => 
   await expect(page.getByText('CetakNow Super Admin')).toBeVisible();
   await expect(page.getByText('Qalam Irma')).toBeVisible();
   await expect(page.getByText('pilot_free')).toBeVisible();
-  await expect(page.getByText('Paid')).toBeVisible();
+  await expect(page.getByText('Paid Orders')).toBeVisible();
 });
 
 test('paid order writes email notification log only after payment', async ({ page }) => {

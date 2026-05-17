@@ -1,8 +1,11 @@
 # CetakNow Tasks
 
 - [x] SaaS landing page
-- [x] Subscription lead capture
-- [x] Super admin lead visibility
+- [x] Direct subscription checkout modal
+- [x] Mock subscription payment flow
+- [x] Self-service shop setup after subscription payment
+- [x] Automatic shop link generation
+- [x] Super admin subscription visibility
 - [x] Core SaaS structure
 - [x] Qalam Irma seeded tenant
 - [x] Public shop order page
