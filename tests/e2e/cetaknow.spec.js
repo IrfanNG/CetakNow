@@ -195,7 +195,7 @@ test('super admin sees SaaS metrics and Qalam Irma tenant', async ({ page }) => 
   await expect(page.getByText('CetakNow Super Admin')).toBeVisible();
   await expect(page.getByText('Qalam Irma')).toBeVisible();
   await expect(page.getByText('pilot_free')).toBeVisible();
-  await expect(page.getByText('Paid Orders')).toBeVisible();
+  await expect(page.getByText('Jumlah Langganan')).toBeVisible();
 });
 
 test('paid order writes email notification log only after payment', async ({ page }) => {

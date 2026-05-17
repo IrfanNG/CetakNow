@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, shopDashboard, shopPage, subscriptionConfirmationPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -55,6 +55,9 @@ export async function app(req, res) {
     if (req.method === 'GET' && confirmMatch) return renderConfirmation(res, db, confirmMatch[1]);
 
     if (req.method === 'GET' && url.pathname === '/admin') return renderAdmin(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
+    const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
+    if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
     if (req.method === 'GET' && detailMatch) return renderOrderDetail(req, res, db, detailMatch[1]);
     const statusMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/status$/);
@@ -349,6 +352,24 @@ function renderAdmin(req, res, db) {
   send(res, 200, shopDashboard({ user, shop, orders }));
 }
 
+function renderShopsManagement(req, res, db) {
+  const user = requireUser(req, db, 'super_admin');
+  if (!user) return notFound(res);
+  send(res, 200, shopsManagementPage({ user, shops: db.shops, orders: db.orders }));
+}
+
+async function toggleShopStatus(req, res, shopId) {
+  await tx(async (db) => {
+    const user = requireUser(req, db, 'super_admin');
+    if (!user) throw Object.assign(new Error('Not found'), { status: 404 });
+    const shop = db.shops.find((s) => s.id === shopId);
+    if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
+    shop.is_active = !shop.is_active;
+    shop.updated_at = nowIso();
+  });
+  redirect(res, '/admin/shops');
+}
+
 function canAccessOrder(user, order) {
   return user?.role === 'super_admin' || (user?.role === 'shop_admin' && user.shop_id === order.shop_id);
 }
@@ -360,7 +381,7 @@ function renderOrderDetail(req, res, db, orderId) {
   if (!order || !canAccessOrder(user, order)) return notFound(res);
   const shop = db.shops.find((s) => s.id === order.shop_id);
   const slot = db.pickup_slots.find((s) => s.id === order.pickup_slot_id);
-  send(res, 200, orderDetails({ order, shop, slot }));
+  send(res, 200, orderDetails({ order, shop, slot, user }));
 }
 
 async function updateOrderStatus(req, res, orderId) {

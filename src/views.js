@@ -204,24 +204,101 @@ export function loginPage(error = '') {
   return layout('CetakNow Login', `<main class="page narrow"><form class="card form" method="post" action="/login"><h1>Admin Login</h1>${error ? `<div class="alert">${escapeHtml(error)}</div>` : ''}<label>Email <input name="email" type="email" required></label><label>Password <input name="password" type="password" required></label><button>Login</button><p class="muted">Demo: owner@cetaknow.local / password · admin@qalamirma.local / password</p></form></main>`);
 }
 
-export function shopDashboard({ user, shop, orders }) {
-  const rows = orders.map((o) => `<tr><td><a href="/admin/orders/${o.id}">${o.order_code}</a></td><td>${escapeHtml(o.customer_name)}</td><td>${escapeHtml(o.customer_phone)}</td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill">${o.payment_status}</span></td><td>${o.order_status}</td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
-  return layout('Shop Dashboard', `<main class="page"><nav class="nav"><b>${escapeHtml(shop.name)} Dashboard</b><a href="/admin/settings">Settings</a><a href="/logout">Logout</a></nav><section class="card"><h1>Orders</h1><table><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody>${rows || '<tr><td colspan="8">No orders yet.</td></tr>'}</tbody></table></section></main>`, shop.primary_color);
+function statusClass(value = '') {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'default';
 }
 
-export function orderDetails({ order, shop, slot }) {
+function adminShell({ title, subtitle, userLabel, active = 'overview', body, role = 'Shop Dashboard', shopSlug = '' }) {
+  const shopLink = shopSlug ? `/shop/${escapeHtml(shopSlug)}` : '/';
+  const shopsHref = role === 'Super Admin' ? '/admin/shops' : '#orders';
+  const item = (key, href, icon, label, hint = '') => `<a class="admin-side-item ${active === key ? 'active' : ''}" href="${href}" aria-current="${active === key ? 'page' : 'false'}"><span class="side-icon ${icon}" aria-hidden="true"></span><em>${label}${hint ? `<small>${hint}</small>` : ''}</em></a>`;
+  return `<main class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-brand"><b>CETAKNOW</b><span>${escapeHtml(role)}</span></div>
+      <nav class="admin-side-nav" aria-label="Admin navigation">
+        ${item('overview', '/admin', 'home', 'Ringkasan', 'Dashboard')}
+        ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Kedai' : 'Order', role === 'Super Admin' ? 'Urus tenant' : 'Senarai kerja')}
+        ${item('shop', shopLink, 'external', role === 'Super Admin' ? 'Landing' : 'Link Kedai', 'Buka page')}
+      </nav>
+      <div class="admin-user"><b>${escapeHtml(userLabel || title)}</b><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
+    </aside>
+    <section class="admin-main">
+      <header class="admin-topbar"><div><p>${escapeHtml(subtitle)}</p><h1>${escapeHtml(title)}</h1></div><a class="admin-menu-button" href="/logout">Logout</a></header>
+      ${body}
+    </section>
+  </main>`;
+}
+
+function metricCard(label, value, tone = 'blue', icon = 'orders', featured = false) {
+  return `<article class="admin-kpi ${tone} ${featured ? 'featured' : ''}"><div><span>${escapeHtml(label)}</span><b>${value}</b></div><i class="kpi-icon ${icon}" aria-hidden="true"></i></article>`;
+}
+
+export function shopDashboard({ user, shop, orders }) {
+  const paidOrders = orders.filter((o) => o.payment_status === 'paid').length;
+  const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
+  const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayPickups = orders.filter((o) => o.pickup_date === today).length;
+  const rows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
+  const body = `<section class="admin-kpi-grid">
+      ${metricCard('Order Aktif', activeOrders, 'red', 'orders', true)}
+      ${metricCard('Order Berbayar', paidOrders, 'blue', 'paid')}
+      ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
+      ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
+    </section>
+    <section class="admin-insight-grid">
+      <article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="#orders">Semak order sekarang</a></article>
+      <article class="admin-ratio"><div><span>Order Berbayar</span><b>${paidOrders}</b></div><div class="bar"><i style="width:${orders.length ? Math.round((paidOrders / orders.length) * 100) : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${orders.length ? Math.round((activeOrders / orders.length) * 100) : 0}%"></i></div></article>
+    </section>
+    <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'}</tbody></table></div></section>`;
+  return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+}
+
+export function orderDetails({ order, shop, slot, user }) {
   const statuses = ['Paid / New Order', 'Printing', 'Ready for Pickup', 'Completed', 'Cancelled', 'File Problem'].map((s) => `<option ${order.order_status === s ? 'selected' : ''}>${s}</option>`).join('');
-  return layout(order.order_code, `<main class="page narrow"><section class="card"><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p><div class="receipt"><p>Pages: ${order.page_count}</p><p>Type: ${order.print_type}</p><p>Sides: ${order.sides}</p><p>Copies: ${order.copies}</p><p>Notes: ${order.notes ? escapeHtml(order.notes) : '-'}</p><p>Pickup: ${order.pickup_date}, ${labelSlot(slot)}</p><p>Total: ${formatMoney(order.total_amount)}</p><p>File delete at: ${new Date(order.file_delete_at).toLocaleString()}</p></div><p><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a></p><form method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form><p><a href="/admin">Back</a></p></section></main>`, shop.primary_color);
+  const body = `<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="detail-actions"><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a><a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
+  return layout(order.order_code, adminShell({ title: order.order_code, subtitle: 'Order detail', userLabel: user?.email || shop.name, active: 'orders', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
 export function superDashboard({ shops, orders, subscriptions = [] }) {
-  const rows = shops.map((s) => `<tr><td>${escapeHtml(s.name)}</td><td>${s.slug}</td><td>${s.is_active ? 'Active' : 'Inactive'}</td><td>${s.plan}</td><td>${s.subscription_status}</td><td>${orders.filter((o) => o.shop_id === s.id).length}</td><td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`).join('');
+  const successfulSubscriptions = subscriptions.filter((s) => s.payment_status === 'paid').length;
+  const activeShops = shops.filter((s) => s.is_active).length;
+  const rows = shops.map((s) => `<tr><td><b>${escapeHtml(s.name)}</b><small>/shop/${escapeHtml(s.slug)}</small></td><td><span class="status-chip ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td>${escapeHtml(s.plan)}</td><td><span class="pill ${statusClass(s.subscription_status)}">${escapeHtml(s.subscription_status)}</span></td><td>${orders.filter((o) => o.shop_id === s.id).length}</td><td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`).join('');
   const subscriptionRows = subscriptions.map((sub) => {
     const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
-    const shopCell = shop ? `<a href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
-    return `<tr><td>${escapeHtml(sub.subscription_code)}</td><td>${escapeHtml(sub.plan_label)}</td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td>${escapeHtml(sub.payment_status)}</td><td>${shopCell}</td><td>${new Date(sub.created_at).toLocaleString()}</td></tr>`;
+    const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
+    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(sub.payment_status)}</span></td><td>${shopCell}</td><td>${new Date(sub.created_at).toLocaleString()}</td></tr>`;
   }).join('');
-  return layout('Super Admin', `<main class="page"><nav class="nav"><b>CetakNow Super Admin</b><a href="/logout">Logout</a></nav><section class="metrics"><div class="card"><b>${shops.length}</b><span>Shops</span></div><div class="card"><b>${orders.length}</b><span>Orders</span></div><div class="card"><b>${orders.filter((o) => o.payment_status === 'paid').length}</b><span>Paid Orders</span></div><div class="card"><b>${subscriptions.filter((s) => s.payment_status === 'paid').length}</b><span>Paid Subscriptions</span></div></section><section class="card"><h1>Shops</h1><table><thead><tr><th>Shop</th><th>Slug</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></section><section class="card lead-table"><h1>Subscriptions</h1><table><thead><tr><th>Code</th><th>Plan</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead><tbody>${subscriptionRows || '<tr><td colspan="8">No subscriptions yet.</td></tr>'}</tbody></table></section></main>`);
+  const body = `<section class="admin-kpi-grid">
+      ${metricCard('Jumlah Kedai', shops.length, 'red', 'orders', true)}
+      ${metricCard('Kedai Aktif', activeShops, 'blue', 'paid')}
+      ${metricCard('Jumlah Langganan', successfulSubscriptions, 'yellow', 'alert')}
+    </section>
+    <section class="admin-insight-grid">
+      <article class="admin-conversion"><span>FOKUS PLATFORM</span><b>${successfulSubscriptions}</b><p>Jumlah kedai yang sudah berjaya langgan. Pending belum dikira sebagai langganan.</p><a href="#orders">Semak tenant</a></article>
+      <article class="admin-ratio"><div><span>Kedai Aktif</span><b>${activeShops}</b></div><div class="bar"><i style="width:${shops.length ? Math.round((activeShops / shops.length) * 100) : 0}%"></i></div><div><span>Jumlah Langganan</span><b>${successfulSubscriptions}</b></div><div class="bar yellow"><i style="width:${subscriptions.length ? Math.round((successfulSubscriptions / subscriptions.length) * 100) : 0}%"></i></div></article>
+    </section>
+    <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Kedai</h2></div><span>${shops.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Shop</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+    <section class="admin-panel lead-table"><div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan</h2></div><span>${subscriptions.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead><tbody>${subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'}</tbody></table></div></section>`;
+  return layout('Super Admin', adminShell({ title: 'CetakNow Super Admin', subtitle: 'Ringkasan Platform', userLabel: 'owner@cetaknow.local', role: 'Super Admin', body }));
+}
+
+export function shopsManagementPage({ user, shops, orders }) {
+  const activeShops = shops.filter((s) => s.is_active).length;
+  const inactiveShops = shops.length - activeShops;
+  const rows = shops.map((s) => {
+    const orderCount = orders.filter((o) => o.shop_id === s.id).length;
+    const actionLabel = s.is_active ? 'Nyahaktifkan' : 'Aktifkan';
+    const actionClass = s.is_active ? 'danger' : 'success';
+    return `<tr><td><b>${escapeHtml(s.name)}</b><small>/shop/${escapeHtml(s.slug)}</small></td><td><span class="status-chip ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td>${escapeHtml(s.plan)}</td><td><span class="pill ${statusClass(s.subscription_status)}">${escapeHtml(s.subscription_status)}</span></td><td>${orderCount}</td><td>${new Date(s.created_at).toLocaleDateString()}</td><td><form class="inline-action" method="post" action="/admin/shops/${s.id}/status"><button class="table-action ${actionClass}" type="submit">${actionLabel}</button></form></td></tr>`;
+  }).join('');
+  const body = `<section class="admin-kpi-grid">
+      ${metricCard('Jumlah Kedai', shops.length, 'red', 'orders', true)}
+      ${metricCard('Kedai Aktif', activeShops, 'blue', 'paid')}
+      ${metricCard('Tidak Aktif', inactiveShops, 'yellow', 'alert')}
+    </section>
+    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan tenant</p><h2>Senarai Kedai</h2></div><span>${shops.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Kedai</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>'}</tbody></table></div></section>`;
+  return layout('Pengurusan Kedai', adminShell({ title: 'Pengurusan Kedai', subtitle: 'Urus tenant CetakNow', userLabel: user.email, active: 'orders', role: 'Super Admin', body }));
 }
 
 export function mockPaymentPage(order) {
