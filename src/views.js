@@ -133,29 +133,33 @@ export function shopPage({ shop, pricing, slots, error = '' }) {
     id: s.id,
     day: Number(s.day_of_week),
     label: `${labelSlot(s)} · max ${s.max_orders}`
-  }))).replace(/</g, '\\u003c');
+  }))).replace(/</g, '\u003c');
   const firstSlot = slots[0] ? `<option value="${slots[0].id}">${dayName(slots[0].day_of_week)} ${labelSlot(slots[0])} · max ${slots[0].max_orders}</option>` : '<option value="">No pickup slots configured</option>';
   return layout(`${shop.name} Online Print`, `
-  <main class="page">
-    <section class="hero card">
-      <div><p class="eyebrow">CetakNow Pilot</p><h1>${escapeHtml(shop.name)} Online Print Order</h1><p>${escapeHtml(shop.description)}</p></div>
+  <main class="shop-order-page">
+    <section class="shop-hero-panel">
+      <div>
+        <p class="eyebrow">CetakNow Pilot</p>
+        <h1>${escapeHtml(shop.name)} Online Print Order</h1>
+        <p>${escapeHtml(shop.description)}</p>
+      </div>
       <a class="map" href="${escapeHtml(shop.google_maps_url)}">Maps</a>
     </section>
     ${error ? `<div class="modal-backdrop"><div class="modal"><h2>Cannot proceed</h2><p>${escapeHtml(error)}</p><a class="button" href="/shop/${shop.slug}">Back to order form</a></div></div>` : ''}
-    <section class="grid">
-      <form class="card form" action="/shop/${shop.slug}/orders" method="post" enctype="multipart/form-data">
-        <h2>Print Online Now</h2>
-        <label>PDF file <input required type="file" name="pdf" accept="application/pdf,.pdf"></label>
+    <section class="shop-order-grid">
+      <form class="shop-order-card" action="/shop/${shop.slug}/orders" method="post" enctype="multipart/form-data">
+        <div class="form-head"><p class="eyebrow">Order form</p><h2>Tempah Print Online</h2></div>
+        <div class="field-block"><label>PDF file <input required type="file" name="pdf" accept="application/pdf,.pdf"></label></div>
         <div class="two"><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(pricing.a4_bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(pricing.a4_color_price_per_page)}/page)</option></select></label><label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label></div>
         <label>Copies <input required type="number" name="copies" min="1" value="1"></label>
         <div class="two"><label>Pickup date <input required type="date" name="pickup_date"></label><label>Pickup slot <select name="pickup_slot_id">${firstSlot}</select></label></div>
         <div class="two"><label>Name <input required name="customer_name" autocomplete="name"></label><label>Phone <input required name="customer_phone" placeholder="60123456789"></label></div>
         <label>Email optional <input type="email" name="customer_email"></label>
         <label>Notes optional <textarea name="notes" placeholder="Extra instruction"></textarea></label>
-        <label class="check"><input required type="checkbox" name="policy_agreed" value="yes"> Minimum pesanan print online ialah ${formatMoney(shop.minimum_order_amount)}. Semua pesanan perlu dibayar sebelum diproses. Fail dipadam selepas 7 hari.</label>
-        <button>Proceed to payment</button>
+        <label class="check shop-policy"><input required type="checkbox" name="policy_agreed" value="yes"><span>Minimum pesanan print online ialah ${formatMoney(shop.minimum_order_amount)}. Semua pesanan perlu dibayar sebelum diproses. Fail dipadam selepas 7 hari.</span></label>
+        <button class="shop-submit">Teruskan ke Pembayaran</button>
       </form>
-      <aside class="card"><h2>Pricing</h2><p>A4 B/W: <b>${formatMoney(pricing.a4_bw_price_per_page)}</b> / page</p><p>A4 Color: <b>${formatMoney(pricing.a4_color_price_per_page)}</b> / page</p><p>Minimum online order: <b>${formatMoney(shop.minimum_order_amount)}</b></p><hr><p>${escapeHtml(shop.address)}</p><p>${escapeHtml(shop.operating_hours)}</p><p>${escapeHtml(shop.phone)}</p></aside>
+
     </section>
     <script>
       const allSlots = ${slotData};
@@ -210,7 +214,7 @@ function statusClass(value = '') {
 
 function adminShell({ title, subtitle, userLabel, active = 'overview', body, role = 'Shop Dashboard', shopSlug = '' }) {
   const shopLink = shopSlug ? `/shop/${escapeHtml(shopSlug)}` : '/';
-  const shopsHref = role === 'Super Admin' ? '/admin/shops' : '#orders';
+  const shopsHref = role === 'Super Admin' ? '/admin/shops' : '/admin/orders';
   const item = (key, href, icon, label, hint = '') => `<a class="admin-side-item ${active === key ? 'active' : ''}" href="${href}" aria-current="${active === key ? 'page' : 'false'}"><span class="side-icon ${icon}" aria-hidden="true"></span><em>${label}${hint ? `<small>${hint}</small>` : ''}</em></a>`;
   return `<main class="admin-layout">
     <aside class="admin-sidebar">
@@ -234,7 +238,7 @@ function metricCard(label, value, tone = 'blue', icon = 'orders', featured = fal
 }
 
 export function shopDashboard({ user, shop, orders }) {
-  const paidOrders = orders.filter((o) => o.payment_status === 'paid').length;
+  const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
   const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
   const today = new Date().toISOString().slice(0, 10);
@@ -242,16 +246,41 @@ export function shopDashboard({ user, shop, orders }) {
   const rows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
   const body = `<section class="admin-kpi-grid">
       ${metricCard('Order Aktif', activeOrders, 'red', 'orders', true)}
-      ${metricCard('Order Berbayar', paidOrders, 'blue', 'paid')}
+      ${metricCard('Total Order', totalOrders, 'blue', 'paid')}
       ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
       ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
     </section>
     <section class="admin-insight-grid">
-      <article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="#orders">Semak order sekarang</a></article>
-      <article class="admin-ratio"><div><span>Order Berbayar</span><b>${paidOrders}</b></div><div class="bar"><i style="width:${orders.length ? Math.round((paidOrders / orders.length) * 100) : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${orders.length ? Math.round((activeOrders / orders.length) * 100) : 0}%"></i></div></article>
+      <article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="/admin/orders">Semak order sekarang</a></article>
+      <article class="admin-ratio"><div><span>Total Order</span><b>${totalOrders}</b></div><div class="bar"><i style="width:${totalOrders ? 100 : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${totalOrders ? Math.round((activeOrders / totalOrders) * 100) : 0}%"></i></div></article>
     </section>
     <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'}</tbody></table></div></section>`;
   return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+}
+
+export function ordersManagementPage({ user, shop = null, shops = [], orders }) {
+  const totalOrders = orders.length;
+  const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
+  const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayPickups = orders.filter((o) => o.pickup_date === today).length;
+  const rows = orders.map((o) => {
+    const orderShop = shop || shops.find((s) => s.id === o.shop_id);
+    const customer = `<b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small>`;
+    const shopCell = orderShop ? `<small>${escapeHtml(orderShop.name)}</small>` : '';
+    return `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a>${shopCell}</td><td>${customer}</td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td><td><a class="table-action neutral" href="/admin/orders/${o.id}">Urus</a></td></tr>`;
+  }).join('');
+  const body = `<section class="admin-kpi-grid">
+      ${metricCard('Total Order', totalOrders, 'red', 'orders', true)}
+      ${metricCard('Order Aktif', activeOrders, 'blue', 'paid')}
+      ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
+      ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
+    </section>
+    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan kerja</p><h2>Senarai Order</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="8"><b>Belum ada order.</b><span>Order pelanggan akan muncul di sini selepas checkout.</span></td></tr>'}</tbody></table></div></section>`;
+  const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
+  const title = 'Pengurusan Order';
+  const subtitle = shop ? `${shop.name} Dashboard` : 'Semua order platform';
+  return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: user.role === 'super_admin' ? '' : 'orders', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
 }
 
 export function orderDetails({ order, shop, slot, user }) {

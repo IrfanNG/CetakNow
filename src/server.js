@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -56,6 +56,7 @@ export async function app(req, res) {
 
     if (req.method === 'GET' && url.pathname === '/admin') return renderAdmin(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db);
     const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
     if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
@@ -356,6 +357,18 @@ function renderShopsManagement(req, res, db) {
   const user = requireUser(req, db, 'super_admin');
   if (!user) return notFound(res);
   send(res, 200, shopsManagementPage({ user, shops: db.shops, orders: db.orders }));
+}
+
+function renderOrdersManagement(req, res, db) {
+  const user = requireUser(req, db);
+  if (!user) return redirect(res, '/login');
+  if (user.role === 'super_admin') {
+    const orders = [...db.orders].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return send(res, 200, ordersManagementPage({ user, shops: db.shops, orders }));
+  }
+  const shop = db.shops.find((s) => s.id === user.shop_id);
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  send(res, 200, ordersManagementPage({ user, shop, orders }));
 }
 
 async function toggleShopStatus(req, res, shopId) {
