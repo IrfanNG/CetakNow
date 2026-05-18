@@ -5,7 +5,7 @@
   "description": "CetakNow MVP - multi-tenant online printing order system",
   "type": "module",
   "scripts": {
-    "dev": "node src/server.js",
+    "dev": "HOST=0.0.0.0 node src/server.js",
     "start": "NODE_ENV=production node src/server.js",
     "test": "npm run test:unit",
     "cleanup": "node src/cleanup.js",

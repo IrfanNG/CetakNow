@@ -20,7 +20,6 @@ export function landingPage({ leadCount = 0 } = {}) {
       <h1>Tempahan Print Online<br><span>Mudah & Tersusun</span></h1>
       <p class="quote-subtitle">Bantu kedai print terima fail PDF, kira harga, ambil bayaran, dan susun pickup tanpa mesej WhatsApp berselerak.</p>
       <div class="hero-mini-links"><span>✓ Upload PDF</span><span>✓ Bayar Dahulu</span><span>✓ Slot Pickup</span></div>
-      <a class="scroll-cue" href="#about" aria-label="Scroll to about">↓</a>
     </section>
 
     <section id="about" class="quote-section white center-copy">
@@ -128,13 +127,24 @@ export function subscribeThanksPage() {
   return layout('Terima Kasih - CetakNow', `<main class="page narrow"><section class="card success"><p class="eyebrow">Minat diterima</p><h1>Terima kasih, kami akan hubungi anda untuk setup CetakNow.</h1><p>Team CetakNow akan semak maklumat kedai dan hubungi anda untuk setup manual bagi fasa MVP.</p><a class="button" href="/">Kembali ke landing page</a></section></main>`);
 }
 
-export function shopPage({ shop, pricing, slots, error = '' }) {
+export function shopPage({ shop, pricing, slots, products = [], paperSizes = [], error = '' }) {
   const slotData = JSON.stringify(slots.map((s) => ({
     id: s.id,
     day: Number(s.day_of_week),
     label: `${labelSlot(s)} · max ${s.max_orders}`
   }))).replace(/</g, '\u003c');
   const firstSlot = slots[0] ? `<option value="${slots[0].id}">${dayName(slots[0].day_of_week)} ${labelSlot(slots[0])} · max ${slots[0].max_orders}</option>` : '<option value="">No pickup slots configured</option>';
+  const activePaperSizes = paperSizes.length ? paperSizes : [{ id: 'a4', label: 'A4', bw_price_per_page: pricing.a4_bw_price_per_page, color_price_per_page: pricing.a4_color_price_per_page }];
+  const paperSizeData = JSON.stringify(activePaperSizes.map((size) => ({
+    id: size.id,
+    label: size.label,
+    bw: Number(size.bw_price_per_page || 0),
+    color: Number(size.color_price_per_page || 0)
+  }))).replace(/</g, '\u003c');
+  const paperSizeOptions = activePaperSizes.map((size, index) => `<option value="${escapeHtml(size.id)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(size.label)}</option>`).join('');
+  const firstPaperSize = activePaperSizes[0];
+  const productOptions = products.map((product) => `<label class="product-option"><input type="checkbox" name="product_ids" value="${escapeHtml(product.id)}"><span><b>${escapeHtml(product.name)}</b>${product.description ? `<small>${escapeHtml(product.description)}</small>` : ''}</span><strong>${formatMoney(product.price)}</strong></label>`).join('');
+  const productSection = productOptions ? `<section class="product-addons"><p class="eyebrow">Add-on optional</p><h3>Tambah produk servis</h3><div class="product-options">${productOptions}</div></section>` : '';
   return layout(`${shop.name} Online Print`, `
   <main class="shop-order-page">
     <section class="shop-hero-panel">
@@ -149,9 +159,11 @@ export function shopPage({ shop, pricing, slots, error = '' }) {
     <section class="shop-order-grid">
       <form class="shop-order-card" action="/shop/${shop.slug}/orders" method="post" enctype="multipart/form-data">
         <div class="form-head"><p class="eyebrow">Order form</p><h2>Tempah Print Online</h2></div>
-        <div class="field-block"><label>PDF file <input required type="file" name="pdf" accept="application/pdf,.pdf"></label></div>
-        <div class="two"><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(pricing.a4_bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(pricing.a4_color_price_per_page)}/page)</option></select></label><label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label></div>
+        <div class="field-block"><label>PDF file(s) <input required multiple type="file" name="pdf" accept="application/pdf,.pdf"></label><small>Muat naik sehingga 10 fail PDF. Harga dikira ikut jumlah halaman semua fail.</small></div>
+        <div class="two"><label>Paper size <select name="paper_size_id">${paperSizeOptions}</select></label><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(firstPaperSize.bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(firstPaperSize.color_price_per_page)}/page)</option></select></label></div>
+        <label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label>
         <label>Copies <input required type="number" name="copies" min="1" value="1"></label>
+        ${productSection}
         <div class="two"><label>Pickup date <input required type="date" name="pickup_date"></label><label>Pickup slot <select name="pickup_slot_id">${firstSlot}</select></label></div>
         <div class="two"><label>Name <input required name="customer_name" autocomplete="name"></label><label>Phone <input required name="customer_phone" placeholder="60123456789"></label></div>
         <label>Email optional <input type="email" name="customer_email"></label>
@@ -159,12 +171,24 @@ export function shopPage({ shop, pricing, slots, error = '' }) {
         <label class="check shop-policy"><input required type="checkbox" name="policy_agreed" value="yes"><span>Minimum pesanan print online ialah ${formatMoney(shop.minimum_order_amount)}. Semua pesanan perlu dibayar sebelum diproses. Fail dipadam selepas 7 hari.</span></label>
         <button class="shop-submit">Teruskan ke Pembayaran</button>
       </form>
-
     </section>
     <script>
       const allSlots = ${slotData};
+      const allPaperSizes = ${paperSizeData};
       const pickupDate = document.querySelector('input[name="pickup_date"]');
       const pickupSlot = document.querySelector('select[name="pickup_slot_id"]');
+      const paperSizeSelect = document.querySelector('select[name="paper_size_id"]');
+      const printTypeSelect = document.querySelector('select[name="print_type"]');
+      function money(value) {
+        return 'RM' + Number(value || 0).toFixed(2);
+      }
+      function syncPrintTypePrices() {
+        const size = allPaperSizes.find((item) => item.id === paperSizeSelect?.value) || allPaperSizes[0];
+        if (!size || !printTypeSelect) return;
+        const selected = printTypeSelect.value || 'bw';
+        printTypeSelect.innerHTML = '<option value="bw">Black & White (' + money(size.bw) + '/page)</option><option value="color">Color (' + money(size.color) + '/page)</option>';
+        printTypeSelect.value = selected;
+      }
       function syncPickupSlots() {
         if (!pickupDate?.value || !pickupSlot) return;
         const previous = pickupSlot.value;
@@ -192,8 +216,10 @@ export function shopPage({ shop, pricing, slots, error = '' }) {
       pickupDate?.addEventListener('input', syncPickupSlots);
       pickupSlot?.addEventListener('focus', syncPickupSlots);
       pickupSlot?.addEventListener('mousedown', syncPickupSlots);
+      paperSizeSelect?.addEventListener('change', syncPrintTypePrices);
       window.addEventListener('pageshow', syncPickupSlots);
       syncPickupSlots();
+      syncPrintTypePrices();
       setTimeout(syncPickupSlots, 0);
       setTimeout(syncPickupSlots, 100);
     </script>
@@ -217,6 +243,7 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
   const subscriptionLink = role === 'Super Admin' ? shopLink : '/admin/subscription';
   const shopsHref = role === 'Super Admin' ? '/admin/shops' : '/admin/orders';
   const item = (key, href, icon, label, hint = '') => `<a class="admin-side-item ${active === key ? 'active' : ''}" href="${href}" aria-current="${active === key ? 'page' : 'false'}"><span class="side-icon ${icon}" aria-hidden="true"></span><em>${label}${hint ? `<small>${hint}</small>` : ''}</em></a>`;
+  const shopSettingsItem = role === 'Super Admin' ? '' : item('settings', '/admin/settings', 'settings', 'Tetapan', 'Kedai & harga');
   return `<main class="admin-layout">
     <aside class="admin-sidebar">
       <div class="admin-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><span>${escapeHtml(role)}</span></div>
@@ -225,6 +252,7 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
         ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Kedai' : 'Order', role === 'Super Admin' ? 'Urus tenant' : 'Senarai kerja')}
         ${item('revenue', '/admin/revenue', 'revenue', 'Hasil', 'Revenue')}
         ${item(role === 'Super Admin' ? 'shop' : 'subscription', subscriptionLink, 'external', role === 'Super Admin' ? 'Landing' : 'Langganan', role === 'Super Admin' ? 'Buka page' : 'Plan & link')}
+        ${shopSettingsItem}
       </nav>
       <div class="admin-user"><b>${escapeHtml(userLabel || title)}</b><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
     </aside>
@@ -290,25 +318,136 @@ function metricCard(label, value, tone = 'blue', icon = 'orders', featured = fal
   return `<article class="admin-kpi ${tone} ${featured ? 'featured' : ''}"><div><span>${escapeHtml(label)}</span><b>${value}</b></div><i class="kpi-icon ${icon}" aria-hidden="true"></i></article>`;
 }
 
-export function shopDashboard({ user, shop, orders }) {
+export function shopDashboardSnapshot({ orders }) {
   const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
   const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
   const today = new Date().toISOString().slice(0, 10);
   const todayPickups = orders.filter((o) => o.pickup_date === today).length;
-  const rows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
-  const body = `<section class="admin-kpi-grid">
-      ${metricCard('Order Aktif', activeOrders, 'red', 'orders', true)}
+  const orderRows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${escapeHtml(o.order_code)}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${escapeHtml(o.pickup_date)}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${escapeHtml(o.payment_status)}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${escapeHtml(o.order_status)}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
+  return {
+    activeOrders,
+    totalOrders,
+    readyOrders,
+    todayPickups,
+    kpis: `${metricCard('Order Aktif', activeOrders, 'red', 'orders', true)}
       ${metricCard('Total Order', totalOrders, 'blue', 'paid')}
       ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
-      ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
-    </section>
-    <section class="admin-insight-grid">
-      <article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="/admin/orders">Semak order sekarang</a></article>
-      <article class="admin-ratio"><div><span>Total Order</span><b>${totalOrders}</b></div><div class="bar"><i style="width:${totalOrders ? 100 : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${totalOrders ? Math.round((activeOrders / totalOrders) * 100) : 0}%"></i></div></article>
-    </section>
-    <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'}</tbody></table></div></section>`;
+      ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}`,
+    insight: `<article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="/admin/orders">Semak order sekarang</a></article>
+      <article class="admin-ratio"><div><span>Total Order</span><b>${totalOrders}</b></div><div class="bar"><i style="width:${totalOrders ? 100 : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${totalOrders ? Math.round((activeOrders / totalOrders) * 100) : 0}%"></i></div></article>`,
+    orderCountLabel: `${orders.length} total`,
+    orderRows: orderRows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'
+  };
+}
+
+export function shopDashboard({ user, shop, orders }) {
+  const snapshot = shopDashboardSnapshot({ orders });
+  const body = `<section class="admin-kpi-grid" data-dashboard-kpis>${snapshot.kpis}</section>
+    <section class="admin-insight-grid" data-dashboard-insight>${snapshot.insight}</section>
+    <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span data-dashboard-order-count>${snapshot.orderCountLabel}</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody data-dashboard-order-rows>${snapshot.orderRows}</tbody></table></div></section>
+    <script>
+      let dashboardPoll = null;
+      async function refreshDashboard() {
+        const response = await fetch('/admin/dashboard.json', { headers: { Accept: 'application/json' } });
+        if (!response.ok) return;
+        const data = await response.json();
+        const kpis = document.querySelector('[data-dashboard-kpis]');
+        const insight = document.querySelector('[data-dashboard-insight]');
+        const orderCount = document.querySelector('[data-dashboard-order-count]');
+        const orderRows = document.querySelector('[data-dashboard-order-rows]');
+        if (kpis) kpis.innerHTML = data.kpis;
+        if (insight) insight.innerHTML = data.insight;
+        if (orderCount) orderCount.textContent = data.orderCountLabel;
+        if (orderRows) orderRows.innerHTML = data.orderRows;
+      }
+      function startDashboardPolling() {
+        if (!dashboardPoll) dashboardPoll = setInterval(refreshDashboard, 5000);
+      }
+      if ('EventSource' in window) {
+        const events = new EventSource('/admin/events');
+        events.addEventListener('dashboard', refreshDashboard);
+        events.onerror = startDashboardPolling;
+      } else {
+        startDashboardPolling();
+      }
+    </script>`;
   return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+}
+
+export function shopSettingsPage({ user, shop, pricing = {}, products = [], paperSizes = [], updated = false }) {
+  const publicLink = `/shop/${escapeHtml(shop.slug)}`;
+  const successBanner = updated ? '<div class="admin-success" role="status">Tetapan kedai berjaya dikemaskini.</div>' : '';
+  const paperSizeRows = paperSizes.map((size) => String(size.id).startsWith('legacy-a4-')
+    ? `<div class="product-edit-row paper-size-legacy"><label>Saiz <input readonly value="${escapeHtml(size.label)}"></label><label>B/W per page (RM) <input readonly value="${formatMoney(size.bw_price_per_page)}"></label><label>Color per page (RM) <input readonly value="${formatMoney(size.color_price_per_page)}"></label><p class="muted">A4 legacy. Tambah saiz baru untuk aktifkan manager.</p></div>`
+    : `<form class="product-edit-row" method="post" action="/admin/paper-sizes/${escapeHtml(size.id)}">
+      <label>Saiz <input required name="label" value="${escapeHtml(size.label)}"></label>
+      <label>B/W per page (RM) <input required type="number" min="0" step="0.01" name="bw_price_per_page" value="${Number(size.bw_price_per_page).toFixed(2)}"></label>
+      <label>Color per page (RM) <input required type="number" min="0" step="0.01" name="color_price_per_page" value="${Number(size.color_price_per_page).toFixed(2)}"></label>
+      <label class="check product-active"><input type="checkbox" name="is_active" ${size.is_active ? 'checked' : ''}> <span>Aktif</span></label>
+      <button type="submit">Simpan Saiz</button>
+    </form>`).join('');
+  const productRows = products.map((product) => `<form class="product-edit-row" method="post" action="/admin/products/${escapeHtml(product.id)}">
+    <label>Nama <input required name="name" value="${escapeHtml(product.name)}"></label>
+    <label>Description <input name="description" value="${escapeHtml(product.description || '')}"></label>
+    <label>Harga (RM) <input required type="number" min="0" step="0.01" name="price" value="${Number(product.price).toFixed(2)}"></label>
+    <label class="check product-active"><input type="checkbox" name="is_active" ${product.is_active ? 'checked' : ''}> <span>Aktif</span></label>
+    <button type="submit">Simpan Produk</button>
+  </form>`).join('');
+  const body = `${successBanner}<form class="admin-settings-form" method="post" action="/admin/settings">
+    <section class="admin-panel settings-panel">
+      <div class="panel-head"><div><p class="eyebrow">Maklumat kedai</p><h2>Profil public shop</h2></div><span>Link dikunci: ${publicLink}</span></div>
+      <div class="settings-grid">
+        <label>Nama kedai <input required name="name" value="${escapeHtml(shop.name)}"></label>
+        <label>Telefon kedai <input required name="phone" value="${escapeHtml(shop.phone)}" inputmode="tel"></label>
+        <label class="settings-full">Description <textarea required name="description">${escapeHtml(shop.description)}</textarea></label>
+        <label class="settings-full">Alamat / kawasan <textarea required name="address">${escapeHtml(shop.address)}</textarea></label>
+        <label>Google Maps URL <input name="google_maps_url" type="url" value="${escapeHtml(shop.google_maps_url)}"></label>
+        <label>Waktu operasi <input required name="operating_hours" value="${escapeHtml(shop.operating_hours)}"></label>
+        <label>Warna utama <input required name="primary_color" type="color" value="${escapeHtml(shop.primary_color || '#062b66')}"></label>
+        <label>Public link <input readonly value="${publicLink}" aria-label="Public shop link"></label>
+      </div>
+    </section>
+    <div class="settings-actions"><button type="submit">Simpan Tetapan</button><a class="button ghost" href="${publicLink}">Buka Link Kedai</a></div>
+  </form>
+  <section class="admin-panel settings-panel product-manager">
+    <div class="panel-head"><div><p class="eyebrow">Pricing</p><h2>Harga ikut saiz kertas</h2></div><span>Dipaparkan di page order</span></div>
+    <div class="product-manager-body">
+      <form class="minimum-order-row" method="post" action="/admin/settings">
+        <label>Minimum online order (RM) <input required type="number" min="0" step="0.01" name="minimum_order_amount" value="${Number(shop.minimum_order_amount ?? 5).toFixed(2)}"></label>
+        <input type="hidden" name="name" value="${escapeHtml(shop.name)}">
+        <input type="hidden" name="phone" value="${escapeHtml(shop.phone)}">
+        <input type="hidden" name="description" value="${escapeHtml(shop.description)}">
+        <input type="hidden" name="address" value="${escapeHtml(shop.address)}">
+        <input type="hidden" name="google_maps_url" value="${escapeHtml(shop.google_maps_url)}">
+        <input type="hidden" name="operating_hours" value="${escapeHtml(shop.operating_hours)}">
+        <input type="hidden" name="primary_color" value="${escapeHtml(shop.primary_color || '#062b66')}">
+        <button type="submit">Simpan Minimum</button>
+      </form>
+      <form class="product-create-row" method="post" action="/admin/paper-sizes">
+        <label>Saiz <input required name="label" placeholder="Contoh: A3"></label>
+        <label>B/W per page (RM) <input required type="number" min="0" step="0.01" name="bw_price_per_page" value="0.00"></label>
+        <label>Color per page (RM) <input required type="number" min="0" step="0.01" name="color_price_per_page" value="0.00"></label>
+        <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
+        <button type="submit">Tambah Saiz</button>
+      </form>
+      <div class="product-edit-list">${paperSizeRows || '<p class="empty-products">Belum ada saiz kertas.</p>'}</div>
+    </div>
+  </section>
+  <section class="admin-panel settings-panel product-manager">
+    <div class="panel-head"><div><p class="eyebrow">Produk / Add-on</p><h2>Produk tambahan order</h2></div><span>Checkbox di page order</span></div>
+    <div class="product-manager-body">
+      <form class="product-create-row" method="post" action="/admin/products">
+        <label>Nama produk <input required name="name" placeholder="Contoh: Binding"></label>
+        <label>Description <input name="description" placeholder="Comb bind / cover / laminate"></label>
+        <label>Harga (RM) <input required type="number" min="0" step="0.01" name="price" value="0.00"></label>
+        <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
+        <button type="submit">Tambah Produk</button>
+      </form>
+      <div class="product-edit-list">${productRows || '<p class="empty-products">Belum ada produk add-on.</p>'}</div>
+    </div>
+  </section>`;
+  return layout('Tetapan Kedai', adminShell({ title: 'Tetapan Kedai', subtitle: `${shop.name} Dashboard`, userLabel: user.email, active: 'settings', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
 
@@ -414,7 +553,11 @@ export function ordersManagementPage({ user, shop = null, shops = [], orders, up
 export function orderDetails({ order, shop, slot, user, updated = false }) {
   const statuses = ['Paid / New Order', 'Printing', 'Ready for Pickup', 'Completed', 'Cancelled', 'File Problem'].map((s) => `<option ${order.order_status === s ? 'selected' : ''}>${s}</option>`).join('');
   const successBanner = updated ? '<div class="admin-success" role="status">Status order berjaya dikemaskini.</div>' : '';
-  const body = `${successBanner}<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="detail-actions"><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a><a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
+  const addOns = (order.product_items || []).map((product) => `${escapeHtml(product.name)} (${formatMoney(product.price)})`).join('<br>') || '-';
+  const files = order.files?.length ? order.files : [{ original_file_name: order.original_file_name || 'order.pdf', page_count: order.page_count, file_path: order.file_path }];
+  const fileLinks = files.map((file, index) => `<a class="button ${index ? 'ghost' : ''}" href="/admin/orders/${order.id}/download/${index + 1}">Download PDF ${files.length > 1 ? index + 1 : ''}</a>`).join('');
+  const fileList = files.map((file, index) => `<li><b>${escapeHtml(file.original_file_name || `PDF ${index + 1}`)}</b><span>${Number(file.page_count || 0)} page(s)</span></li>`).join('');
+  const body = `${successBanner}<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Files</span><b>${files.length}</b></p><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Paper size</span><b>${escapeHtml(order.paper_size || 'A4')}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Add-ons</span><b>${addOns}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Print subtotal</span><b>${formatMoney(order.subtotal ?? order.total_amount)}</b></p><p><span>Add-on total</span><b>${formatMoney(order.product_total || 0)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="file-list"><p class="eyebrow">Uploaded PDFs</p><ul>${fileList}</ul></div><div class="detail-actions">${fileLinks}<a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
   return layout(order.order_code, adminShell({ title: order.order_code, subtitle: 'Order detail', userLabel: user?.email || shop.name, active: 'orders', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 

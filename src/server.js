@@ -2,17 +2,19 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { readDb, tx, id, nowIso, ensureDb } from './db.js';
-import { parseForm, parseMultipart, redirect, send, staticFile } from './http-utils.js';
+import { json, parseForm, parseMultipart, redirect, send, staticFile } from './http-utils.js';
 import { loginUser, logoutUser, requireUser } from './auth.js';
 import { detectPdfPageCount, isPdfFilename } from './pdf.js';
 import { calculateTotal } from './pricing.js';
-import { isSlotAvailable } from './pickup.js';
+import { isSlotAvailable, syncPickupSlotsForShop } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopDashboardSnapshot, shopPage, shopSettingsPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
+const MAX_PDF_FILES = 10;
+const adminEventClients = new Map();
 
 export async function app(req, res) {
   try {
@@ -59,15 +61,24 @@ export async function app(req, res) {
     if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db, url.searchParams.get('updated') === '1', Number.parseInt(url.searchParams.get('page') || '1', 10));
     if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db, url.searchParams.get('date') || '', Number.parseInt(url.searchParams.get('page') || '1', 10));
     if (req.method === 'GET' && url.pathname === '/admin/subscription') return renderSubscriptionAdmin(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/settings') return renderShopSettings(req, res, db, url.searchParams.get('updated') === '1');
+    if (req.method === 'POST' && url.pathname === '/admin/settings') return await updateShopSettings(req, res);
+    if (req.method === 'POST' && url.pathname === '/admin/products') return await createShopProduct(req, res);
+    const productMatch = url.pathname.match(/^\/admin\/products\/([^/]+)$/);
+    if (req.method === 'POST' && productMatch) return await updateShopProduct(req, res, productMatch[1]);
+    if (req.method === 'POST' && url.pathname === '/admin/paper-sizes') return await createPaperSize(req, res);
+    const paperSizeMatch = url.pathname.match(/^\/admin\/paper-sizes\/([^/]+)$/);
+    if (req.method === 'POST' && paperSizeMatch) return await updatePaperSize(req, res, paperSizeMatch[1]);
+    if (req.method === 'GET' && url.pathname === '/admin/dashboard.json') return renderDashboardJson(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/events') return renderAdminEvents(req, res, db);
     const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
     if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
     if (req.method === 'GET' && detailMatch) return renderOrderDetail(req, res, db, detailMatch[1], url.searchParams.get('updated') === '1');
     const statusMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/status$/);
     if (req.method === 'POST' && statusMatch) return await updateOrderStatus(req, res, statusMatch[1]);
-    const downloadMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/download$/);
-    if (req.method === 'GET' && downloadMatch) return downloadOrderFile(req, res, db, downloadMatch[1]);
-    if (req.method === 'GET' && url.pathname === '/admin/settings') return send(res, 200, '<meta http-equiv="refresh" content="0; url=/admin"><p>Settings editing scaffolded in data/db.json for MVP pilot.</p>');
+    const downloadMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/download(?:\/(\d+))?$/);
+    if (req.method === 'GET' && downloadMatch) return downloadOrderFile(req, res, db, downloadMatch[1], Number.parseInt(downloadMatch[2] || '1', 10) - 1);
 
     return notFound(res);
   } catch (error) {
@@ -182,6 +193,8 @@ async function setupSubscriptionShop(req, res, code) {
     db.users ||= [];
     db.shop_pricing ||= [];
     db.pickup_slots ||= [];
+    db.shop_payment_settings ||= [];
+    db.shop_paper_sizes ||= [];
     const createdAt = nowIso();
     const uniqueSlug = uniqueShopSlug(db, slugBase);
     const shopName = String(form.shop_name || '').trim();
@@ -214,21 +227,29 @@ async function setupSubscriptionShop(req, res, code) {
       created_at: createdAt,
       updated_at: createdAt
     });
-    for (const day of [1, 2, 3, 4, 5, 6]) {
-      for (const [index, [start, end]] of [['09:00', '10:00'], ['10:00', '11:00'], ['11:00', '12:00']].entries()) {
-        db.pickup_slots.push({
-          id: id('slot'),
-          shop_id: shop.id,
-          day_of_week: day,
-          start_time: start,
-          end_time: end,
-          max_orders: 5,
-          is_active: true,
-          created_at: createdAt,
-          updated_at: createdAt
-        });
-      }
-    }
+    db.shop_paper_sizes.push({
+      id: id('paper_size'),
+      shop_id: shop.id,
+      label: 'A4',
+      bw_price_per_page: 0.2,
+      color_price_per_page: 1,
+      is_active: true,
+      sort_order: 1,
+      created_at: createdAt,
+      updated_at: createdAt
+    });
+    db.shop_payment_settings.push({
+      id: id('payment_settings'),
+      shop_id: shop.id,
+      gateway_type: 'billplz_mock',
+      api_key: 'mock',
+      collection_id: 'mock',
+      x_signature_key: 'mock_secret',
+      is_enabled: true,
+      created_at: createdAt,
+      updated_at: createdAt
+    });
+    syncPickupSlotsForShop(db, shop);
     const existingUser = db.users.find((u) => String(u.email).toLowerCase() === String(subscription.email).toLowerCase());
     if (existingUser && existingUser.role !== 'super_admin') {
       existingUser.name = existingUser.name || `${shopName} Owner`;
@@ -295,52 +316,80 @@ function shopCode(name, index) {
 function renderShop(res, db, slug, error = '') {
   const shop = db.shops.find((s) => s.slug === slug);
   if (!shop || !shop.is_active) return send(res, 404, '<h1>Shop unavailable</h1>');
-  const pricing = db.shop_pricing.find((p) => p.shop_id === shop.id);
-  const slots = db.pickup_slots.filter((s) => s.shop_id === shop.id && s.is_active);
-  send(res, 200, shopPage({ shop, pricing, slots, error }));
+  const pricing = (db.shop_pricing || []).find((p) => p.shop_id === shop.id) || { a4_bw_price_per_page: 0.2, a4_color_price_per_page: 1 };
+  const slots = db.pickup_slots
+    .filter((s) => s.shop_id === shop.id && s.is_active)
+    .sort((a, b) => daySort(a.day_of_week) - daySort(b.day_of_week) || String(a.start_time).localeCompare(String(b.start_time)));
+  const products = (db.shop_products || []).filter((p) => p.shop_id === shop.id && p.is_active);
+  const paperSizes = activePaperSizes(db, shop, pricing);
+  send(res, 200, shopPage({ shop, pricing, slots, products, paperSizes, error }));
 }
 
 async function createOrder(req, res, slug, origin) {
   let fields = {};
+  let createdShopId = '';
   try {
     const parsed = await parseMultipart(req);
     fields = parsed.fields;
-    const file = parsed.files.pdf;
-    const paymentUrl = await tx(async (db) => {
+    const uploadedFiles = normalizeUploadedFiles(parsed.files.pdf);
+    const { paymentUrl, shopId } = await tx(async (db) => {
     const shop = db.shops.find((s) => s.slug === slug && s.is_active);
     if (!shop) throw Object.assign(new Error('Shop unavailable'), { status: 404 });
-    const pricing = db.shop_pricing.find((p) => p.shop_id === shop.id);
-    if (!file?.value?.length || !isPdfFilename(file.filename)) throw Object.assign(new Error('PDF file required'), { status: 400 });
-    if (file.value.length > MAX_PDF_SIZE) throw Object.assign(new Error('PDF exceeds 50MB limit'), { status: 400 });
-    const pageCount = detectPdfPageCount(file.value);
+    const pricing = (db.shop_pricing || []).find((p) => p.shop_id === shop.id) || { a4_bw_price_per_page: 0.2, a4_color_price_per_page: 1 };
+    const paperSizes = activePaperSizes(db, shop, pricing);
+    const paperSize = paperSizes.find((size) => size.id === fields.paper_size_id) || paperSizes[0];
+    const selectedProducts = selectedProductIds(fields.product_ids)
+      .map((productId) => (db.shop_products || []).find((p) => p.id === productId && p.shop_id === shop.id && p.is_active))
+      .filter(Boolean);
+    if (!uploadedFiles.length) throw Object.assign(new Error('PDF file required'), { status: 400 });
+    if (uploadedFiles.length > MAX_PDF_FILES) throw Object.assign(new Error(`Maximum ${MAX_PDF_FILES} PDF files per order`), { status: 400 });
+    for (const file of uploadedFiles) {
+      if (!file?.value?.length || !isPdfFilename(file.filename)) throw Object.assign(new Error('PDF file required'), { status: 400 });
+      if (file.value.length > MAX_PDF_SIZE) throw Object.assign(new Error('PDF exceeds 50MB limit'), { status: 400 });
+    }
+    const uploadDetails = uploadedFiles.map((file) => ({
+      file,
+      originalName: path.basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, '_') || 'document.pdf',
+      pageCount: detectPdfPageCount(file.value)
+    }));
+    const pageCount = uploadDetails.reduce((sum, item) => sum + item.pageCount, 0);
     const copies = Math.max(1, Number.parseInt(fields.copies || '1', 10));
     const printType = fields.print_type === 'color' ? 'color' : 'bw';
     const sides = fields.sides === 'double' ? 'double' : 'single';
-    const total = calculateTotal({ pageCount, printType, copies, pricing });
+    const printTotal = calculateTotal({ pageCount, printType, copies, pricing, paperSize });
+    const productItems = selectedProducts.map((product) => ({ product_id: product.id, name: product.name, price: Number(product.price || 0) }));
+    const productTotal = productItems.reduce((sum, product) => sum + Number(product.price || 0), 0);
+    const total = Math.round((printTotal + productTotal + Number.EPSILON) * 100) / 100;
     if (total < Number(shop.minimum_order_amount)) throw Object.assign(new Error(`Jumlah pesanan ${total.toFixed(2)}. Minimum online order ialah RM${Number(shop.minimum_order_amount).toFixed(2)}.`), { status: 400 });
     if (fields.policy_agreed !== 'yes') throw Object.assign(new Error('Policy agreement required'), { status: 400 });
     const availability = isSlotAvailable({ db, shopId: shop.id, slotId: fields.pickup_slot_id, pickupDate: fields.pickup_date });
     if (!availability.ok) throw Object.assign(new Error(availability.reason), { status: 400 });
     const orderCode = nextOrderCode(db, shop);
     await fs.mkdir('storage/pdfs', { recursive: true });
-    const safeOriginal = path.basename(file.filename).replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = path.resolve('storage/pdfs', `${orderCode}-${safeOriginal}`);
-    await fs.writeFile(filePath, file.value);
+    const savedFiles = [];
+    for (const [index, detail] of uploadDetails.entries()) {
+      const filePath = path.resolve('storage/pdfs', `${orderCode}-${String(index + 1).padStart(2, '0')}-${detail.originalName}`);
+      await fs.writeFile(filePath, detail.file.value);
+      savedFiles.push({ original_file_name: detail.originalName, file_path: filePath, page_count: detail.pageCount });
+    }
     const createdAt = nowIso();
+    const fileDeleteAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const order = {
       id: id('order'), shop_id: shop.id, order_code: orderCode,
       customer_name: fields.customer_name || '', customer_phone: fields.customer_phone || '', customer_email: fields.customer_email || '',
-      file_path: filePath, original_file_name: safeOriginal, page_count: pageCount, paper_size: 'A4', print_type: printType, sides, copies,
-      notes: fields.notes || '', subtotal: total, total_amount: total, minimum_order_amount: shop.minimum_order_amount,
+      files: savedFiles, file_path: savedFiles[0].file_path, original_file_name: savedFiles[0].original_file_name, page_count: pageCount, paper_size_id: paperSize?.id || null, paper_size: paperSize?.label || 'A4', print_type: printType, sides, copies,
+      notes: fields.notes || '', product_items: productItems, subtotal: printTotal, product_total: productTotal, total_amount: total, minimum_order_amount: shop.minimum_order_amount,
       payment_status: 'pending', order_status: 'Pending Payment', pickup_date: fields.pickup_date, pickup_slot_id: fields.pickup_slot_id,
-      payment_reference: null, file_delete_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), file_deleted_at: null,
+      payment_reference: null, file_delete_at: fileDeleteAt, file_deleted_at: null,
       created_at: createdAt, updated_at: createdAt
     };
     db.orders.push(order);
     const result = await createPayment({ db, order, shop, origin });
     order.payment_reference = result.payment.gateway_reference;
-    return result.paymentUrl;
+    return { paymentUrl: result.paymentUrl, shopId: shop.id };
     });
+    createdShopId = shopId;
+    notifyAdminDashboard(createdShopId);
     redirect(res, paymentUrl);
   } catch (error) {
     const db = await readDb();
@@ -351,6 +400,7 @@ async function createOrder(req, res, slug, origin) {
 }
 
 async function completeMockPayment(res, orderCode) {
+  let paidShopId = '';
   await tx(async (db) => {
     const order = db.orders.find((o) => o.order_code === orderCode);
     if (!order) throw Object.assign(new Error('Order not found'), { status: 404 });
@@ -358,7 +408,9 @@ async function completeMockPayment(res, orderCode) {
     const slot = db.pickup_slots.find((s) => s.id === order.pickup_slot_id);
     markPaymentPaid(db, order, { mock: true });
     await sendPaidOrderEmail(db, { shop, order, slot });
+    paidShopId = order.shop_id;
   });
+  notifyAdminDashboard(paidShopId);
   redirect(res, `/orders/${orderCode}/confirmation`);
 }
 
@@ -377,6 +429,47 @@ function renderAdmin(req, res, db) {
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   send(res, 200, shopDashboard({ user, shop, orders }));
+}
+
+function shopDashboardData(db, user) {
+  const shop = db.shops.find((s) => s.id === user.shop_id);
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return { shop, orders };
+}
+
+function renderDashboardJson(req, res, db) {
+  const user = requireUser(req, db);
+  if (!user) return json(res, 401, { error: 'Login required' });
+  if (user.role === 'super_admin') return json(res, 404, { error: 'Not found' });
+  const { shop, orders } = shopDashboardData(db, user);
+  if (!shop) return json(res, 404, { error: 'Shop not found' });
+  json(res, 200, shopDashboardSnapshot({ orders }));
+}
+
+function renderAdminEvents(req, res, db) {
+  const user = requireUser(req, db);
+  if (!user || user.role !== 'shop_admin') return send(res, 401, 'Login required');
+  const shopId = user.shop_id;
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive'
+  });
+  res.write(': connected\n\n');
+  const clients = adminEventClients.get(shopId) || new Set();
+  clients.add(res);
+  adminEventClients.set(shopId, clients);
+  req.on('close', () => {
+    clients.delete(res);
+    if (!clients.size) adminEventClients.delete(shopId);
+  });
+}
+
+function notifyAdminDashboard(shopId) {
+  if (!shopId) return;
+  for (const res of adminEventClients.get(shopId) || []) {
+    res.write(`event: dashboard\ndata: ${JSON.stringify({ updated_at: nowIso() })}\n\n`);
+  }
 }
 
 
@@ -403,6 +496,136 @@ function renderSubscriptionAdmin(req, res, db) {
     .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))[0] || null;
   const payment = subscription ? (db.payments || []).find((p) => p.subscription_id === subscription.id) : null;
   send(res, 200, subscriptionPage({ user, shop, subscription, payment }));
+}
+
+function renderShopSettings(req, res, db, updated = false) {
+  const user = requireUser(req, db);
+  if (!user) return redirect(res, '/login');
+  if (user.role === 'super_admin') return redirect(res, '/admin');
+  const shop = db.shops.find((s) => s.id === user.shop_id);
+  if (!shop) return notFound(res);
+  const pricing = (db.shop_pricing || []).find((p) => p.shop_id === shop.id);
+  const products = (db.shop_products || []).filter((p) => p.shop_id === shop.id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const paperSizes = allPaperSizes(db, shop, pricing);
+  send(res, 200, shopSettingsPage({ user, shop, pricing, products, paperSizes, updated }));
+}
+
+async function updateShopSettings(req, res) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db);
+    if (!user) throw Object.assign(new Error('Login required'), { status: 401 });
+    if (user.role === 'super_admin') throw Object.assign(new Error('Not found'), { status: 404 });
+    db.shop_pricing ||= [];
+    const shop = db.shops.find((s) => s.id === user.shop_id);
+    if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
+    let pricing = db.shop_pricing.find((p) => p.shop_id === shop.id);
+    if (!pricing) {
+      pricing = { id: id('pricing'), shop_id: shop.id, a4_bw_price_per_page: 0.2, a4_color_price_per_page: 1, created_at: nowIso(), updated_at: nowIso() };
+      db.shop_pricing.push(pricing);
+    }
+    const updatedAt = nowIso();
+    shop.name = String(form.name || '').trim() || shop.name;
+    shop.description = String(form.description || '').trim() || shop.description;
+    shop.phone = String(form.phone || '').trim() || shop.phone;
+    shop.address = String(form.address || '').trim() || shop.address;
+    shop.google_maps_url = String(form.google_maps_url || '').trim() || shop.google_maps_url || 'https://maps.google.com/';
+    shop.operating_hours = String(form.operating_hours || '').trim() || shop.operating_hours;
+    shop.primary_color = normalizeHexColor(form.primary_color, shop.primary_color);
+    shop.minimum_order_amount = positiveMoney(form.minimum_order_amount, shop.minimum_order_amount);
+    shop.updated_at = updatedAt;
+    pricing.updated_at = updatedAt;
+    syncPickupSlotsForShop(db, shop);
+  });
+  redirect(res, '/admin/settings?updated=1');
+}
+
+async function createShopProduct(req, res) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db);
+    if (!user || user.role !== 'shop_admin') throw Object.assign(new Error('Not found'), { status: 404 });
+    const shop = db.shops.find((s) => s.id === user.shop_id);
+    if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
+    db.shop_products ||= [];
+    const now = nowIso();
+    const name = String(form.name || '').trim();
+    if (!name) throw Object.assign(new Error('Nama produk diperlukan'), { status: 400 });
+    db.shop_products.push({
+      id: id('product'),
+      shop_id: shop.id,
+      name,
+      description: String(form.description || '').trim(),
+      price: positiveMoney(form.price, 0),
+      is_active: form.is_active === 'on',
+      created_at: now,
+      updated_at: now
+    });
+  });
+  redirect(res, '/admin/settings?updated=1');
+}
+
+async function updateShopProduct(req, res, productId) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db);
+    if (!user || user.role !== 'shop_admin') throw Object.assign(new Error('Not found'), { status: 404 });
+    const product = (db.shop_products || []).find((p) => p.id === productId && p.shop_id === user.shop_id);
+    if (!product) throw Object.assign(new Error('Product not found'), { status: 404 });
+    const name = String(form.name || '').trim();
+    if (!name) throw Object.assign(new Error('Nama produk diperlukan'), { status: 400 });
+    product.name = name;
+    product.description = String(form.description || '').trim();
+    product.price = positiveMoney(form.price, product.price);
+    product.is_active = form.is_active === 'on';
+    product.updated_at = nowIso();
+  });
+  redirect(res, '/admin/settings?updated=1');
+}
+
+async function createPaperSize(req, res) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db);
+    if (!user || user.role !== 'shop_admin') throw Object.assign(new Error('Not found'), { status: 404 });
+    const shop = db.shops.find((s) => s.id === user.shop_id);
+    if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
+    const pricing = (db.shop_pricing || []).find((p) => p.shop_id === shop.id);
+    ensureDefaultPaperSize(db, shop, pricing);
+    const now = nowIso();
+    const label = String(form.label || '').trim().toUpperCase();
+    if (!label) throw Object.assign(new Error('Nama saiz kertas diperlukan'), { status: 400 });
+    db.shop_paper_sizes.push({
+      id: id('paper_size'),
+      shop_id: shop.id,
+      label,
+      bw_price_per_page: positiveMoney(form.bw_price_per_page, 0),
+      color_price_per_page: positiveMoney(form.color_price_per_page, 0),
+      is_active: form.is_active === 'on',
+      sort_order: (db.shop_paper_sizes || []).filter((size) => size.shop_id === shop.id).length + 1,
+      created_at: now,
+      updated_at: now
+    });
+  });
+  redirect(res, '/admin/settings?updated=1');
+}
+
+async function updatePaperSize(req, res, paperSizeId) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db);
+    if (!user || user.role !== 'shop_admin') throw Object.assign(new Error('Not found'), { status: 404 });
+    const paperSize = (db.shop_paper_sizes || []).find((size) => size.id === paperSizeId && size.shop_id === user.shop_id);
+    if (!paperSize) throw Object.assign(new Error('Paper size not found'), { status: 404 });
+    const label = String(form.label || '').trim().toUpperCase();
+    if (!label) throw Object.assign(new Error('Nama saiz kertas diperlukan'), { status: 400 });
+    paperSize.label = label;
+    paperSize.bw_price_per_page = positiveMoney(form.bw_price_per_page, paperSize.bw_price_per_page);
+    paperSize.color_price_per_page = positiveMoney(form.color_price_per_page, paperSize.color_price_per_page);
+    paperSize.is_active = form.is_active === 'on';
+    paperSize.updated_at = nowIso();
+  });
+  redirect(res, '/admin/settings?updated=1');
 }
 
 function renderShopsManagement(req, res, db) {
@@ -450,6 +673,7 @@ function renderOrderDetail(req, res, db, orderId, updated = false) {
 }
 
 async function updateOrderStatus(req, res, orderId) {
+  let changedShopId = '';
   const form = await parseForm(req);
   await tx(async (db) => {
     const user = requireUser(req, db);
@@ -460,26 +684,76 @@ async function updateOrderStatus(req, res, orderId) {
     if (!allowed.includes(form.order_status)) throw Object.assign(new Error('Invalid status'), { status: 400 });
     order.order_status = form.order_status;
     order.updated_at = nowIso();
+    changedShopId = order.shop_id;
   });
+  notifyAdminDashboard(changedShopId);
   redirect(res, '/admin/orders?updated=1');
 }
 
-async function downloadOrderFile(req, res, db, orderId) {
+async function downloadOrderFile(req, res, db, orderId, fileIndex = 0) {
   const user = requireUser(req, db);
   const order = db.orders.find((o) => o.id === orderId);
   if (!user) return redirect(res, '/login');
   if (!order || !canAccessOrder(user, order)) return notFound(res);
   if (order.file_deleted_at) return send(res, 410, '<h1>File deleted</h1><p>This PDF was auto-deleted for privacy.</p>');
-  const data = await fs.readFile(order.file_path);
-  res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${order.original_file_name}"` });
+  const files = order.files?.length ? order.files : [{ file_path: order.file_path, original_file_name: order.original_file_name || 'order.pdf' }];
+  const file = files[fileIndex];
+  if (!file?.file_path) return notFound(res);
+  const data = await fs.readFile(file.file_path);
+  res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${file.original_file_name || 'order.pdf'}"` });
   res.end(data);
 }
 
 function notFound(res) { send(res, 404, '<h1>Not found</h1>'); }
 function escape(v) { return String(v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+function normalizeHexColor(value, fallback = '#062b66') {
+  const raw = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : fallback;
+}
+function selectedProductIds(value) {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).map((item) => String(item || '').trim()).filter(Boolean);
+}
+function normalizeUploadedFiles(value) {
+  if (!value) return [];
+  return (Array.isArray(value) ? value : [value]).filter((file) => file?.filename && file?.value?.length);
+}
+function daySort(value) {
+  const day = Number(value);
+  return day === 0 ? 7 : day;
+}
+function fallbackPaperSize(shop, pricing = {}) {
+  return {
+    id: `legacy-a4-${shop.id}`,
+    shop_id: shop.id,
+    label: 'A4',
+    bw_price_per_page: Number(pricing.a4_bw_price_per_page ?? 0.2),
+    color_price_per_page: Number(pricing.a4_color_price_per_page ?? 1),
+    is_active: true,
+    sort_order: 1,
+    created_at: shop.created_at,
+    updated_at: pricing.updated_at || shop.updated_at
+  };
+}
+function allPaperSizes(db, shop, pricing = {}) {
+  const sizes = (db.shop_paper_sizes || [])
+    .filter((size) => size.shop_id === shop.id)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0) || String(a.label).localeCompare(String(b.label)));
+  return sizes.length ? sizes : [fallbackPaperSize(shop, pricing)];
+}
+function activePaperSizes(db, shop, pricing = {}) {
+  const active = allPaperSizes(db, shop, pricing).filter((size) => size.is_active);
+  return active.length ? active : [fallbackPaperSize(shop, pricing)];
+}
+function ensureDefaultPaperSize(db, shop, pricing = {}) {
+  db.shop_paper_sizes ||= [];
+  if (db.shop_paper_sizes.some((size) => size.shop_id === shop.id)) return;
+  db.shop_paper_sizes.push(fallbackPaperSize(shop, pricing));
+}
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   await ensureDb();
   const port = Number(process.env.PORT || 3000);
-  http.createServer(app).listen(port, '127.0.0.1', () => console.log(`CetakNow running at http://127.0.0.1:${port}`));
+  const host = process.env.HOST || '127.0.0.1';
+  http.createServer(app).listen(port, host, () => console.log(`CetakNow running at http://${host}:${port}`));
 }

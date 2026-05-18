@@ -6,10 +6,15 @@ export async function cleanupExpiredFiles(now = new Date()) {
   await tx(async (db) => {
     for (const order of db.orders) {
       if (!order.file_deleted_at && order.file_path && new Date(order.file_delete_at) <= now) {
-        try { await fs.unlink(order.file_path); } catch {}
+        const files = order.files?.length ? order.files : [{ file_path: order.file_path }];
+        for (const file of files) {
+          if (file.file_path) {
+            try { await fs.unlink(file.file_path); } catch {}
+          }
+        }
         order.file_deleted_at = nowIso();
         order.updated_at = nowIso();
-        deleted += 1;
+        deleted += files.length;
       }
     }
   });

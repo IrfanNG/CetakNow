@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { detectPdfPageCount } from '../src/pdf.js';
 import { calculateTotal } from '../src/pricing.js';
-import { isSlotAvailable } from '../src/pickup.js';
+import { generateHourlyPickupSlots, isSlotAvailable, parseOperatingHours, syncPickupSlotsForShop } from '../src/pickup.js';
 
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n2 0 obj << /Type /Page >> endobj\n%%EOF', 'latin1');
 
@@ -27,4 +27,23 @@ test('pickup slot rejects full slot', () => {
   const result = isSlotAvailable({ db, shopId: 'shop1', slotId: 'slot1', pickupDate: '2030-01-07', now: new Date('2030-01-01T00:00:00') });
   assert.equal(result.ok, false);
   assert.match(result.reason, /fully booked/);
+});
+
+test('operating hours generate hourly pickup slots through close time', () => {
+  assert.deepEqual(parseOperatingHours('Mon-Sun, 8:00 AM - 11:00 PM'), { days: [1, 2, 3, 4, 5, 6, 0], start: '08:00', end: '23:00' });
+  const slots = generateHourlyPickupSlots('Mon-Sun, 8:00 AM - 11:00 PM');
+  assert.equal(slots.length, 105);
+  assert.deepEqual(slots[0], { day_of_week: 1, start_time: '08:00', end_time: '09:00', max_orders: 5 });
+  assert.deepEqual(slots.at(-1), { day_of_week: 0, start_time: '22:00', end_time: '23:00', max_orders: 5 });
+});
+
+test('sync pickup slots updates active slots without deleting old order slots', () => {
+  const db = {
+    pickup_slots: [{ id: 'old_slot', shop_id: 'shop1', day_of_week: 1, start_time: '09:00', end_time: '10:00', max_orders: 5, is_active: true }],
+    orders: [{ shop_id: 'shop1', pickup_slot_id: 'old_slot' }]
+  };
+  syncPickupSlotsForShop(db, { id: 'shop1', operating_hours: 'Tue, 8:00 AM - 10:00 AM' });
+  assert.equal(db.pickup_slots.find((slot) => slot.id === 'old_slot').is_active, false);
+  assert.equal(db.pickup_slots.filter((slot) => slot.shop_id === 'shop1' && slot.is_active).length, 2);
+  assert.ok(db.pickup_slots.some((slot) => slot.day_of_week === 2 && slot.start_time === '08:00' && slot.end_time === '09:00' && slot.is_active));
 });

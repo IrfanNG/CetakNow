@@ -50,8 +50,17 @@ export async function parseMultipart(req) {
   const fields = {};
   const files = {};
   for (const part of parts) {
-    if (part.filename !== undefined) files[part.name] = part;
-    else fields[part.name] = part.value.toString('utf8');
+    if (part.filename !== undefined) {
+      if (files[part.name] === undefined) files[part.name] = part;
+      else if (Array.isArray(files[part.name])) files[part.name].push(part);
+      else files[part.name] = [files[part.name], part];
+    }
+    else {
+      const value = part.value.toString('utf8');
+      if (fields[part.name] === undefined) fields[part.name] = value;
+      else if (Array.isArray(fields[part.name])) fields[part.name].push(value);
+      else fields[part.name] = [fields[part.name], value];
+    }
   }
   return { fields, files };
 }

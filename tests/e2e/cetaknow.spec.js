@@ -16,9 +16,9 @@ async function resetDb() {
   await fs.rm('storage/mail.log', { force: true });
 }
 
-async function fillValidOrder(page, { copies = '5', printType = 'color', notes = 'test notes', date = '2030-01-07' } = {}) {
+async function fillValidOrder(page, { copies = '5', printType = 'color', notes = 'test notes', date = '2030-01-07', files = pdfPath } = {}) {
   await page.goto('/shop/qalamirma');
-  await page.locator('input[name="pdf"]').setInputFiles(pdfPath);
+  await page.locator('input[name="pdf"]').setInputFiles(files);
   await page.selectOption('select[name="print_type"]', printType);
   await page.fill('input[name="copies"]', copies);
   await page.fill('input[name="pickup_date"]', date);
@@ -174,6 +174,10 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
   await page.fill('textarea[name="address"]', 'Kawasan kampus test');
   await expect(page.locator('input[type="url"][name="google_maps_url"]')).toHaveCount(1);
   await page.fill('input[name="google_maps_url"]', 'https://maps.google.com/?q=student+print+test');
+  await page.locator('.day-picker input[value="Sun"]').check();
+  await page.locator('.open-time').fill('08:00');
+  await page.locator('.close-time').fill('23:00');
+  await expect(page.locator('input[name="operating_hours"]')).toHaveValue('Mon-Sun, 8:00 AM - 11:00 PM');
   await expect(page.getByText('Email login:')).toBeVisible();
   await page.fill('input[name="password"]', 'student123');
   await page.fill('input[name="password_confirm"]', 'student123');
@@ -184,7 +188,10 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
   await page.goto('/shop/student-print-test');
   await expect(page.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', 'https://maps.google.com/?q=student+print+test');
   await expect(page.getByRole('heading', { name: 'Student Print Test Online Print Order' })).toBeVisible();
-  await expect(page.getByText('A4 B/W: RM0.20 / page')).toBeVisible();
+  await expect(page.locator('select[name="print_type"]')).toContainText('Black & White (RM0.20/page)');
+  await page.fill('input[name="pickup_date"]', '2030-01-13');
+  await expect(page.locator('select[name="pickup_slot_id"]')).toContainText('08:00 - 09:00');
+  await expect(page.locator('select[name="pickup_slot_id"]')).toContainText('22:00 - 23:00');
 
   await page.goto('/login');
   await page.fill('input[name="email"]', 'owner@studentprint.test');
@@ -197,9 +204,11 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
 test('public shop page renders branding, pricing, and mobile-safe form basics', async ({ page }) => {
   await page.goto('/shop/qalamirma');
   await expect(page.getByRole('heading', { name: 'Qalam Irma Online Print Order' })).toBeVisible();
-  await expect(page.getByText('A4 B/W: RM0.20 / page')).toBeVisible();
-  await expect(page.getByText('A4 Color: RM1.00 / page')).toBeVisible();
-  await expect(page.getByText('Minimum online order: RM5.00')).toBeVisible();
+  await expect(page.getByText('Ringkasan Kedai')).toHaveCount(0);
+  await expect(page.locator('input[name="pdf"]')).toHaveAttribute('multiple', '');
+  await expect(page.locator('select[name="print_type"]')).toContainText('Black & White (RM0.20/page)');
+  await expect(page.locator('select[name="print_type"]')).toContainText('Color (RM1.00/page)');
+  await expect(page.getByText('Minimum pesanan print online ialah RM5.00')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', /maps.google.com/);
   await page.setViewportSize({ width: 390, height: 900 });
   await expect(page.getByRole('button', { name: 'Proceed to payment' })).toBeVisible();
@@ -258,6 +267,21 @@ test('happy path: customer pays, confirmation shown, shop admin sees order with 
   expect((await download).suggestedFilename()).toContain('one-page.pdf');
 });
 
+test('customer can upload multiple PDF files in one order', async ({ page }) => {
+  await createPaidOrder(page, { copies: '5', printType: 'color', files: [pdfPath, pdfPath], notes: 'two pdfs' });
+  await expect(page.getByText('Total: RM10.00')).toBeVisible();
+
+  await login(page, 'admin@qalamirma.local');
+  await page.getByRole('link', { name: 'CN-QI-1001' }).click();
+  await expect(page.getByText('Files: 2')).toBeVisible();
+  await expect(page.getByText('Pages: 2')).toBeVisible();
+  await expect(page.getByText('one-page.pdf')).toHaveCount(2);
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download PDF 2' }).click();
+  expect((await download).suggestedFilename()).toContain('one-page.pdf');
+});
+
 test('shop admin sidebar opens Langganan page with plan and public shop link', async ({ page }) => {
   await login(page, 'admin@qalamirma.local');
   await expect(page.getByRole('link', { name: /Langganan/ })).toBeVisible();
@@ -269,6 +293,106 @@ test('shop admin sidebar opens Langganan page with plan and public shop link', a
   await expect(page.getByText('Pilot')).toBeVisible();
   await expect(page.getByRole('link', { name: '/shop/qalamirma' })).toHaveAttribute('href', '/shop/qalamirma');
   await expect(page.getByRole('link', { name: 'Buka Link Kedai' })).toHaveAttribute('href', '/shop/qalamirma');
+});
+
+test('shop admin can manage shop information and pricing without changing public link', async ({ page }) => {
+  await login(page, 'admin@qalamirma.local');
+  await page.getByRole('link', { name: /Tetapan/ }).click();
+  await expect(page).toHaveURL('/admin/settings');
+  await expect(page.getByRole('heading', { name: 'Tetapan Kedai' })).toBeVisible();
+  await expect(page.locator('input[aria-label="Public shop link"]')).toHaveValue('/shop/qalamirma');
+
+  await page.fill('input[name="name"]', 'Qalam Irma Updated');
+  await page.fill('textarea[name="description"]', 'Order PDF, bayar online, pickup tersusun.');
+  await page.fill('input[name="phone"]', '60199999999');
+  await page.fill('textarea[name="address"]', 'Kawasan kampus updated');
+  await page.fill('input[name="google_maps_url"]', 'https://maps.google.com/?q=qalam+irma+updated');
+  await page.fill('input[name="operating_hours"]', 'Mon-Fri, 10:00 AM - 7:00 PM');
+  await page.getByRole('button', { name: 'Simpan Tetapan' }).click();
+  await expect(page).toHaveURL('/admin/settings?updated=1');
+  await expect(page.getByText('Tetapan kedai berjaya dikemaskini.')).toBeVisible();
+  await expect(page.getByText('Harga ikut saiz kertas')).toBeVisible();
+  await expect(page.getByText('B/W per page (RM)').first()).toBeVisible();
+  await expect(page.getByText('Color per page (RM)').first()).toBeVisible();
+  await expect(page.locator('input[name="a4_bw_price_per_page"]')).toHaveCount(0);
+  await page.fill('input[name="minimum_order_amount"]', '6.00');
+  await page.getByRole('button', { name: 'Simpan Minimum' }).click();
+  await expect(page).toHaveURL('/admin/settings?updated=1');
+
+  await page.goto('/shop/qalamirma');
+  await expect(page.getByRole('heading', { name: 'Qalam Irma Updated Online Print Order' })).toBeVisible();
+  await expect(page.getByText('Ringkasan Kedai')).toHaveCount(0);
+  await expect(page.locator('select[name="print_type"]')).toContainText('Black & White (RM0.20/page)');
+  await expect(page.locator('select[name="print_type"]')).toContainText('Color (RM1.00/page)');
+  await expect(page.getByText('Minimum pesanan print online ialah RM6.00')).toBeVisible();
+  await page.fill('input[name="pickup_date"]', '2030-01-07');
+  await expect(page.locator('select[name="pickup_slot_id"]')).toContainText('10:00 - 11:00');
+  await expect(page.locator('select[name="pickup_slot_id"]')).toContainText('18:00 - 19:00');
+  await expect(page.locator('select[name="pickup_slot_id"]')).not.toContainText('09:00 - 10:00');
+  await expect(page.locator('select[name="pickup_slot_id"]')).not.toContainText('20:00 - 21:00');
+  await expect(page.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', 'https://maps.google.com/?q=qalam+irma+updated');
+});
+
+test('shop admin can add order add-ons and customer total includes selected products', async ({ page }) => {
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/settings');
+  await page.fill('input[name="name"][placeholder="Contoh: Binding"]', 'Binding');
+  await page.fill('input[name="description"][placeholder="Comb bind / cover / laminate"]', 'Comb binding siap pickup');
+  await page.fill('form[action="/admin/products"] input[name="price"]', '2.00');
+  await page.getByRole('button', { name: 'Tambah Produk' }).click();
+  await expect(page).toHaveURL('/admin/settings?updated=1');
+
+  await fillValidOrder(page, { copies: '5', printType: 'color', notes: 'with binding' });
+  await expect(page.getByText('Binding')).toBeVisible();
+  await expect(page.getByText('Comb binding siap pickup')).toBeVisible();
+  await page.getByLabel(/Binding/).check();
+  await page.getByRole('button', { name: 'Teruskan ke Pembayaran' }).click();
+  await expect(page).toHaveURL(/\/payment\/mock\/CN-QI-1001/);
+  await expect(page.getByText('Pay RM7.00')).toBeVisible();
+  await page.getByRole('button', { name: 'Simulate successful payment' }).click();
+
+  await login(page, 'admin@qalamirma.local');
+  await page.getByRole('link', { name: 'CN-QI-1001' }).click();
+  await expect(page.getByText('Add-ons')).toBeVisible();
+  await expect(page.getByText('Binding (RM2.00)')).toBeVisible();
+  await expect(page.locator('.detail-grid').getByText('RM7.00')).toBeVisible();
+});
+
+test('shop admin can add paper size and customer pricing uses selected size', async ({ page }) => {
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/settings');
+  await page.fill('form[action="/admin/paper-sizes"] input[name="label"]', 'A3');
+  await page.fill('form[action="/admin/paper-sizes"] input[name="bw_price_per_page"]', '0.50');
+  await page.fill('form[action="/admin/paper-sizes"] input[name="color_price_per_page"]', '2.00');
+  await page.getByRole('button', { name: 'Tambah Saiz' }).click();
+  await expect(page).toHaveURL('/admin/settings?updated=1');
+
+  await fillValidOrder(page, { copies: '5', printType: 'color', notes: 'a3 color' });
+  await expect(page.locator('select[name="paper_size_id"]')).toContainText('A3');
+  await page.selectOption('select[name="paper_size_id"]', { label: 'A3' });
+  await expect(page.locator('select[name="print_type"]')).toContainText('Color (RM2.00/page)');
+  await page.selectOption('select[name="print_type"]', 'color');
+  await page.getByRole('button', { name: 'Teruskan ke Pembayaran' }).click();
+  await expect(page).toHaveURL(/\/payment\/mock\/CN-QI-1001/);
+  await expect(page.getByText('Pay RM10.00')).toBeVisible();
+  await page.getByRole('button', { name: 'Simulate successful payment' }).click();
+
+  await login(page, 'admin@qalamirma.local');
+  await page.getByRole('link', { name: 'CN-QI-1001' }).click();
+  await expect(page.getByText('Paper size')).toBeVisible();
+  await expect(page.locator('.detail-grid').getByText('A3')).toBeVisible();
+  await expect(page.locator('.detail-grid').getByText('RM10.00')).toBeVisible();
+});
+
+test('shop admin dashboard JSON reflects new orders for live updates', async ({ page }) => {
+  await createPaidOrder(page);
+  await login(page, 'admin@qalamirma.local');
+  const dashboard = await page.request.get('/admin/dashboard.json');
+  expect(dashboard.ok()).toBeTruthy();
+  const data = await dashboard.json();
+  expect(data.totalOrders).toBe(1);
+  expect(data.orderRows).toContain('CN-QI-1001');
+  expect(data.orderRows).toContain('Paid / New Order');
 });
 
 test('shop admin can update order status lifecycle', async ({ page }) => {

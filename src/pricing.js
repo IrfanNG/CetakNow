@@ -1,5 +1,8 @@
-export function calculateTotal({ pageCount, printType, copies, pricing }) {
-  const price = printType === 'color' ? pricing.a4_color_price_per_page : pricing.a4_bw_price_per_page;
+export function calculateTotal({ pageCount, printType, copies, pricing, paperSize = null }) {
+  const source = paperSize || pricing;
+  const price = printType === 'color'
+    ? (source.color_price_per_page ?? source.a4_color_price_per_page)
+    : (source.bw_price_per_page ?? source.a4_bw_price_per_page);
   return roundMoney(Number(pageCount) * Number(price) * Number(copies));
 }
 
