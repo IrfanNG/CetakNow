@@ -73,6 +73,36 @@ async function seedPaidOrders(count = 12) {
   await fs.writeFile('data/db.json', JSON.stringify(db, null, 2));
 }
 
+
+async function seedRevenueOrders() {
+  const db = JSON.parse(await fs.readFile('data/db.json', 'utf8'));
+  db.orders = [
+    { id: 'order_may_17', shop_id: 'shop_qalamirma', order_code: 'CN-QI-2001', customer_name: 'May Customer', customer_phone: '60111111111', customer_email: 'may@example.test', original_file_name: 'one-page.pdf', file_path: 'storage/pdfs/.gitkeep', page_count: 1, print_type: 'color', sides: 'single', copies: 10, total_amount: 10, payment_status: 'paid', order_status: 'Paid / New Order', pickup_date: '2030-01-07', pickup_slot_id: 'slot_qi_d1_1', notes: '', file_delete_at: '2030-01-14T00:00:00.000Z', created_at: '2026-05-17T10:00:00.000Z', updated_at: '2026-05-17T10:00:00.000Z' },
+    { id: 'order_may_18', shop_id: 'shop_qalamirma', order_code: 'CN-QI-2002', customer_name: 'Month Customer', customer_phone: '60222222222', customer_email: 'month@example.test', original_file_name: 'one-page.pdf', file_path: 'storage/pdfs/.gitkeep', page_count: 1, print_type: 'bw', sides: 'single', copies: 25, total_amount: 5, payment_status: 'paid', order_status: 'Paid / New Order', pickup_date: '2030-01-07', pickup_slot_id: 'slot_qi_d1_1', notes: '', file_delete_at: '2030-01-14T00:00:00.000Z', created_at: '2026-05-18T10:00:00.000Z', updated_at: '2026-05-18T10:00:00.000Z' },
+    { id: 'order_april', shop_id: 'shop_qalamirma', order_code: 'CN-QI-1999', customer_name: 'April Customer', customer_phone: '60333333333', customer_email: 'april@example.test', original_file_name: 'one-page.pdf', file_path: 'storage/pdfs/.gitkeep', page_count: 1, print_type: 'color', sides: 'single', copies: 20, total_amount: 20, payment_status: 'paid', order_status: 'Paid / New Order', pickup_date: '2030-01-07', pickup_slot_id: 'slot_qi_d1_1', notes: '', file_delete_at: '2030-01-14T00:00:00.000Z', created_at: '2026-04-30T10:00:00.000Z', updated_at: '2026-04-30T10:00:00.000Z' }
+  ];
+  db.payments = [
+    { id: 'payment_may_17', order_id: 'order_may_17', shop_id: 'shop_qalamirma', gateway_type: 'billplz_mock', gateway_reference: 'MOCK-CN-QI-2001', amount: 10, status: 'paid', paid_at: '2026-05-17T10:00:00.000Z', raw_response: {}, created_at: '2026-05-17T10:00:00.000Z', updated_at: '2026-05-17T10:00:00.000Z' },
+    { id: 'payment_may_18', order_id: 'order_may_18', shop_id: 'shop_qalamirma', gateway_type: 'billplz_mock', gateway_reference: 'MOCK-CN-QI-2002', amount: 5, status: 'paid', paid_at: '2026-05-18T10:00:00.000Z', raw_response: {}, created_at: '2026-05-18T10:00:00.000Z', updated_at: '2026-05-18T10:00:00.000Z' },
+    { id: 'payment_april', order_id: 'order_april', shop_id: 'shop_qalamirma', gateway_type: 'billplz_mock', gateway_reference: 'MOCK-CN-QI-1999', amount: 20, status: 'paid', paid_at: '2026-04-30T10:00:00.000Z', raw_response: {}, created_at: '2026-04-30T10:00:00.000Z', updated_at: '2026-04-30T10:00:00.000Z' }
+  ];
+  await fs.writeFile('data/db.json', JSON.stringify(db, null, 2));
+}
+
+
+async function seedRevenuePaginationOrders(count = 12) {
+  const db = JSON.parse(await fs.readFile('data/db.json', 'utf8'));
+  db.orders = Array.from({ length: count }, (_, i) => {
+    const number = i + 1;
+    return { id: `revenue_order_${number}`, shop_id: 'shop_qalamirma', order_code: `CN-QI-${3000 + number}`, customer_name: `Revenue Customer ${number}`, customer_phone: `6012345${String(number).padStart(4, '0')}`, customer_email: `revenue${number}@example.test`, original_file_name: 'one-page.pdf', file_path: 'storage/pdfs/.gitkeep', page_count: 1, print_type: 'color', sides: 'single', copies: 10, total_amount: number, payment_status: 'paid', order_status: 'Paid / New Order', pickup_date: '2030-01-07', pickup_slot_id: 'slot_qi_d1_1', notes: '', file_delete_at: '2030-01-14T00:00:00.000Z', created_at: `2026-05-${String(number).padStart(2, '0')}T10:00:00.000Z`, updated_at: `2026-05-${String(number).padStart(2, '0')}T10:00:00.000Z` };
+  });
+  db.payments = db.orders.map((order, i) => {
+    const number = i + 1;
+    return { id: `revenue_payment_${number}`, order_id: order.id, shop_id: 'shop_qalamirma', gateway_type: 'billplz_mock', gateway_reference: `MOCK-${order.order_code}`, amount: number, status: 'paid', paid_at: `2026-05-${String(number).padStart(2, '0')}T10:00:00.000Z`, raw_response: {}, created_at: `2026-05-${String(number).padStart(2, '0')}T10:00:00.000Z`, updated_at: `2026-05-${String(number).padStart(2, '0')}T10:00:00.000Z` };
+  });
+  await fs.writeFile('data/db.json', JSON.stringify(db, null, 2));
+}
+
 async function login(page, email) {
   await page.goto('/login');
   await page.fill('input[name="email"]', email);
@@ -251,9 +281,40 @@ test('shop admin can monitor paid order revenue', async ({ page }) => {
   await login(page, 'admin@qalamirma.local');
   await page.goto('/admin/revenue');
   await expect(page.getByRole('heading', { name: 'Ringkasan Hasil' })).toBeVisible();
-  await expect(page.getByText('Hasil Hari Ini')).toBeVisible();
+  await expect(page.getByText('Hasil Tarikh Ini')).toBeVisible();
   await expect(page.getByText('RM10.00')).toBeVisible();
   await expect(page.getByText('CN-QI-1001')).toBeVisible();
+});
+
+test('shop admin can filter sales by selected date', async ({ page }) => {
+  await seedRevenueOrders();
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/revenue?date=2026-05-17');
+  await expect(page.locator('input[name="date"]')).toHaveValue('2026-05-17');
+  await expect(page.getByRole('button', { name: 'Semak Tarikh' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Hari Ini' })).toHaveAttribute('href', '/admin/revenue');
+  await expect(page.getByText('Paparan berdasarkan tarikh: 17/05/2026')).toBeVisible();
+  await expect(page.getByText('Hasil Tarikh Ini')).toBeVisible();
+  await expect(page.getByText('RM10.00').first()).toBeVisible();
+  await expect(page.getByText('RM15.00')).toBeVisible();
+  await expect(page.getByText('RM35.00')).toBeVisible();
+  await expect(page.getByText('CN-QI-2001')).toBeVisible();
+  await expect(page.getByText('CN-QI-2002')).toBeVisible();
+  await expect(page.getByText('CN-QI-1999')).toHaveCount(0);
+});
+
+test('revenue table paginates selected month transactions', async ({ page }) => {
+  await seedRevenuePaginationOrders(12);
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/revenue?date=2026-05-12');
+  await expect(page.getByText('Page 1 / 2')).toBeVisible();
+  await expect(page.getByText('CN-QI-3012')).toBeVisible();
+  await expect(page.getByText('CN-QI-3001')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Seterusnya' })).toHaveAttribute('href', '/admin/revenue?date=2026-05-12&page=2');
+  await page.getByRole('link', { name: 'Seterusnya' }).click();
+  await expect(page).toHaveURL('/admin/revenue?date=2026-05-12&page=2');
+  await expect(page.getByText('Page 2 / 2')).toBeVisible();
+  await expect(page.getByText('CN-QI-3001')).toBeVisible();
 });
 
 test('super admin can monitor paid subscription revenue', async ({ page }) => {

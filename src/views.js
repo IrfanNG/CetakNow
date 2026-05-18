@@ -271,10 +271,23 @@ function sumAmount(items) {
   return items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 }
 
-export function revenuePage({ user, shop = null, shops = [], orders = [], payments = [], subscriptions = [], mode = 'orders' }) {
+function normalizeDateInput(value) {
+  const raw = String(value || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return new Date().toISOString().slice(0, 10);
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === raw ? raw : new Date().toISOString().slice(0, 10);
+}
+
+function displayDate(value) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
+}
+
+export function revenuePage({ user, shop = null, shops = [], orders = [], payments = [], subscriptions = [], mode = 'orders', selectedDate = '', page = 1 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const month = today.slice(0, 7);
-  const year = today.slice(0, 4);
+  const reportDate = normalizeDateInput(selectedDate);
+  const month = reportDate.slice(0, 7);
+  const year = reportDate.slice(0, 4);
   const source = payments
     .filter((p) => p.status === 'paid' && p.paid_at)
     .filter((p) => mode === 'subscriptions' ? p.subscription_id : p.order_id)
@@ -285,10 +298,17 @@ export function revenuePage({ user, shop = null, shops = [], orders = [], paymen
       return { payment, order, subscription, shop: shop || paymentShop, parts: dateParts(payment.paid_at), amount: Number(payment.amount || 0) };
     })
     .sort((a, b) => String(b.payment.paid_at).localeCompare(String(a.payment.paid_at)));
-  const daily = source.filter((item) => item.parts.day === today);
+  const daily = source.filter((item) => item.parts.day === reportDate);
   const monthly = source.filter((item) => item.parts.month === month);
   const yearly = source.filter((item) => item.parts.year === year);
-  const rows = source.slice(0, 20).map((item) => {
+  const visibleRows = source.filter((item) => item.parts.month === month);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize));
+  const currentPage = Math.min(Math.max(Number.isFinite(page) ? page : 1, 1), totalPages);
+  const pageRows = visibleRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const queryDate = `date=${encodeURIComponent(reportDate)}`;
+  const pagination = visibleRows.length > pageSize ? `<div class="table-pagination"><a class="page-link ${currentPage === 1 ? 'disabled' : ''}" ${currentPage === 1 ? 'aria-disabled="true"' : `href="/admin/revenue?${queryDate}&page=${currentPage - 1}"`}>Sebelumnya</a><span>Page ${currentPage} / ${totalPages}</span><a class="page-link ${currentPage === totalPages ? 'disabled' : ''}" ${currentPage === totalPages ? 'aria-disabled="true"' : `href="/admin/revenue?${queryDate}&page=${currentPage + 1}"`}>Seterusnya</a></div>` : '';
+  const rows = pageRows.map((item) => {
     const ref = item.order?.order_code || item.subscription?.subscription_code || item.payment.gateway_reference || item.payment.id;
     const sourceLabel = mode === 'subscriptions'
       ? `${item.subscription?.plan_label || 'Langganan'}${item.shop ? ` · ${escapeHtml(item.shop.name)}` : ''}`
@@ -298,12 +318,12 @@ export function revenuePage({ user, shop = null, shops = [], orders = [], paymen
   const title = 'Ringkasan Hasil';
   const subtitle = mode === 'subscriptions' ? 'Revenue langganan platform' : `${shop?.name || 'Kedai'} Revenue`;
   const body = `<section class="admin-kpi-grid revenue-kpis">
-      ${metricCard('Hasil Hari Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true)}
+      ${metricCard('Hasil Tarikh Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true)}
       ${metricCard('Bulan Ini', formatMoney(sumAmount(monthly)), 'blue', 'paid')}
       ${metricCard('Tahun Ini', formatMoney(sumAmount(yearly)), 'yellow', 'alert')}
       ${metricCard('Jumlah Transaksi', source.length, 'green', 'check')}
     </section>
-    <section class="admin-panel revenue-panel"><div class="panel-head"><div><p class="eyebrow">Pemantauan hasil</p><h2>${mode === 'subscriptions' ? 'Langganan Berbayar' : 'Order Berbayar'}</h2></div><span>${source.length} transaksi</span></div><div class="table-wrap"><table><thead><tr><th>Paid At</th><th>Reference</th><th>Source</th><th>Amount</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="4"><b>Belum ada hasil berbayar.</b><span>Transaksi akan muncul selepas bayaran berjaya.</span></td></tr>'}</tbody></table></div></section>`;
+    <section class="admin-panel revenue-panel"><div class="panel-head"><div><p class="eyebrow">Pemantauan hasil</p><h2>${mode === 'subscriptions' ? 'Langganan Berbayar' : 'Order Berbayar'}</h2><p class="revenue-date-note">Paparan berdasarkan tarikh: ${displayDate(reportDate)}</p></div><span>${source.length} transaksi</span></div><form class="revenue-filter" method="get" action="/admin/revenue"><label>Tarikh <input type="date" name="date" value="${escapeHtml(reportDate)}" aria-label="Pilih tarikh revenue"></label><a href="/admin/revenue">Hari Ini</a></form><script>document.querySelector('.revenue-filter input[name="date"]')?.addEventListener('change', (event) => { if (event.target.value) location.href = '/admin/revenue?date=' + encodeURIComponent(event.target.value); });</script><div class="table-wrap"><table><thead><tr><th>Paid At</th><th>Reference</th><th>Source</th><th>Amount</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="4"><b>Belum ada hasil berbayar.</b><span>Transaksi akan muncul selepas bayaran berjaya.</span></td></tr>'}</tbody></table></div>${pagination}</section>`;
   const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
   return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: 'revenue', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
 }

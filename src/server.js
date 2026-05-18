@@ -57,7 +57,7 @@ export async function app(req, res) {
     if (req.method === 'GET' && url.pathname === '/admin') return renderAdmin(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db, url.searchParams.get('updated') === '1', Number.parseInt(url.searchParams.get('page') || '1', 10));
-    if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db, url.searchParams.get('date') || '', Number.parseInt(url.searchParams.get('page') || '1', 10));
     const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
     if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
@@ -355,16 +355,16 @@ function renderAdmin(req, res, db) {
 }
 
 
-function renderRevenue(req, res, db) {
+function renderRevenue(req, res, db, selectedDate = '', page = 1) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
   if (user.role === 'super_admin') {
-    return send(res, 200, revenuePage({ user, shops: db.shops, orders: db.orders, payments: db.payments || [], subscriptions: db.subscriptions || [], mode: 'subscriptions' }));
+    return send(res, 200, revenuePage({ user, shops: db.shops, orders: db.orders, payments: db.payments || [], subscriptions: db.subscriptions || [], mode: 'subscriptions', selectedDate, page }));
   }
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id);
   const payments = (db.payments || []).filter((p) => p.shop_id === user.shop_id);
-  send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders' }));
+  send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders', selectedDate, page }));
 }
 
 function renderShopsManagement(req, res, db) {
