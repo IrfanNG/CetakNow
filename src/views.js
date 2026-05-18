@@ -214,6 +214,7 @@ function statusClass(value = '') {
 
 function adminShell({ title, subtitle, userLabel, active = 'overview', body, role = 'Shop Dashboard', shopSlug = '' }) {
   const shopLink = shopSlug ? `/shop/${escapeHtml(shopSlug)}` : '/';
+  const subscriptionLink = role === 'Super Admin' ? shopLink : '/admin/subscription';
   const shopsHref = role === 'Super Admin' ? '/admin/shops' : '/admin/orders';
   const item = (key, href, icon, label, hint = '') => `<a class="admin-side-item ${active === key ? 'active' : ''}" href="${href}" aria-current="${active === key ? 'page' : 'false'}"><span class="side-icon ${icon}" aria-hidden="true"></span><em>${label}${hint ? `<small>${hint}</small>` : ''}</em></a>`;
   return `<main class="admin-layout">
@@ -223,7 +224,7 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
         ${item('overview', '/admin', 'home', 'Ringkasan', 'Dashboard')}
         ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Kedai' : 'Order', role === 'Super Admin' ? 'Urus tenant' : 'Senarai kerja')}
         ${item('revenue', '/admin/revenue', 'revenue', 'Hasil', 'Revenue')}
-        ${item('shop', shopLink, 'external', role === 'Super Admin' ? 'Landing' : 'Link Kedai', 'Buka page')}
+        ${item(role === 'Super Admin' ? 'shop' : 'subscription', subscriptionLink, 'external', role === 'Super Admin' ? 'Landing' : 'Langganan', role === 'Super Admin' ? 'Buka page' : 'Plan & link')}
       </nav>
       <div class="admin-user"><b>${escapeHtml(userLabel || title)}</b><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
     </aside>
@@ -232,6 +233,57 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
       ${body}
     </section>
   </main>`;
+}
+
+function planLabel(value = '') {
+  const plan = String(value || '').toLowerCase();
+  if (plan === 'annual' || plan === 'yearly') return 'Pelan Tahunan';
+  if (plan === 'monthly') return 'Pelan Bulanan';
+  if (plan === 'pilot') return 'Pilot';
+  return value ? String(value) : 'Pilot';
+}
+
+function displayDateTime(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : '-';
+}
+
+export function subscriptionPage({ user, shop, subscription = null, payment = null }) {
+  const publicLink = `/shop/${escapeHtml(shop.slug)}`;
+  const label = subscription?.plan_label || planLabel(subscription?.plan || shop.plan);
+  const status = shop.subscription_status || subscription?.payment_status || 'pilot_free';
+  const amount = subscription?.amount ?? payment?.amount ?? 0;
+  const body = `<section class="admin-detail subscription-detail">
+    <p class="eyebrow">Langganan kedai</p>
+    <div class="detail-title"><div><h1>Maklumat Langganan</h1><p>${escapeHtml(shop.name)} · ${publicLink}</p></div><span class="status-chip ${statusClass(status)}">${escapeHtml(status)}</span></div>
+    <div class="receipt detail-grid">
+      <p><span>Plan</span><b>${escapeHtml(label)}</b></p>
+      <p><span>Status</span><b>${escapeHtml(status)}</b></p>
+      <p><span>Code</span><b>${escapeHtml(subscription?.subscription_code || '-')}</b></p>
+      <p><span>Email</span><b>${escapeHtml(subscription?.email || user.email || shop.email || '-')}</b></p>
+      <p><span>Amount Paid</span><b>${formatMoney(amount)}</b></p>
+      <p><span>Created</span><b>${displayDateTime(subscription?.created_at || shop.created_at)}</b></p>
+      <p><span>Paid At</span><b>${displayDateTime(payment?.paid_at)}</b></p>
+      <p><span>Public Shop Link</span><b><a href="${publicLink}">${publicLink}</a></b></p>
+    </div>
+    <div class="detail-actions">
+      <a class="button" href="${publicLink}">Buka Link Kedai</a>
+      <button class="button ghost" type="button" data-copy-link="${publicLink}">Copy link</button>
+    </div>
+    <script>
+      document.querySelector('[data-copy-link]')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        const link = button.getAttribute('data-copy-link');
+        try {
+          await navigator.clipboard.writeText(location.origin + link);
+          button.textContent = 'Copied';
+        } catch {
+          button.textContent = link;
+        }
+      });
+    </script>
+  </section>`;
+  return layout('Langganan', adminShell({ title: 'Langganan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, active: 'subscription', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
 function metricCard(label, value, tone = 'blue', icon = 'orders', featured = false) {
@@ -417,7 +469,7 @@ export function mockSubscriptionPaymentPage(subscription) {
 
 export function subscriptionConfirmationPage(subscription, shop = null) {
   if (shop) {
-    return layout('Link kedai siap - CetakNow', `<main class="page narrow setup-page"><section class="card success setup-success"><p class="eyebrow">Page kedai siap</p><h1>Link CetakNow kedai anda sudah dijana.</h1><p>Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan.</p><div class="receipt shop-link-receipt"><p>Nama kedai: <b>${escapeHtml(shop.name)}</b></p><p>Link kedai: <a href="/shop/${escapeHtml(shop.slug)}"><b>/shop/${escapeHtml(shop.slug)}</b></a></p><p>Pelan: <b>${escapeHtml(subscription.plan_label)}</b></p></div><div class="setup-actions"><a class="button" href="/shop/${escapeHtml(shop.slug)}">Buka Page Kedai</a><a class="button ghost" href="/">Kembali ke landing page</a></div></section></main>`, shop.primary_color);
+    return layout('Link kedai siap - CetakNow', `<main class="page narrow setup-page"><section class="card success setup-success"><p class="eyebrow">Page kedai siap</p><h1>Link CetakNow kedai anda sudah dijana.</h1><p>Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan.</p><div class="receipt shop-link-receipt"><p>Nama kedai: <b>${escapeHtml(shop.name)}</b></p><p>Link kedai: <a href="/shop/${escapeHtml(shop.slug)}"><b>/shop/${escapeHtml(shop.slug)}</b></a></p><p>Pelan: <b>${escapeHtml(subscription.plan_label)}</b></p><p>Login dashboard: <b>${escapeHtml(subscription.email)}</b></p></div><div class="setup-actions"><a class="button" href="/login">Log Masuk Dashboard</a><a class="button ghost" href="/shop/${escapeHtml(shop.slug)}">Buka Page Kedai</a><a class="button ghost" href="/">Kembali ke landing page</a></div></section></main>`, shop.primary_color);
   }
 
   return layout('Setup kedai - CetakNow', `<main class="page setup-page">
@@ -430,12 +482,12 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
         <h2>Maklumat kedai</h2>
         <label>Nama kedai * <input required name="shop_name" autocomplete="organization" placeholder="Contoh: Student Print Seksyen 7"></label>
         <label>Slug link kedai * <input required name="slug" pattern="[a-z0-9-]{3,64}" placeholder="student-print-seksyen-7" aria-describedby="slug-help"><small id="slug-help" class="muted">Link akan jadi /shop/<span class="slug-preview">nama-kedai</span></small></label>
-        <div class="two"><label>Telefon kedai * <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"></label><label>Waktu operasi * <input required name="operating_hours" placeholder="Mon-Sat, 9:00 AM - 9:00 PM"></label></div>
+        <div class="two"><label>Telefon kedai * <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"></label><fieldset class="operating-hours-picker"><legend>Waktu operasi *</legend><input type="hidden" name="operating_hours" value="Mon-Sat, 9:00 AM - 9:00 PM"><div class="day-picker" aria-label="Pilih hari operasi"><label><input type="checkbox" value="Mon" checked>Mon</label><label><input type="checkbox" value="Tue" checked>Tue</label><label><input type="checkbox" value="Wed" checked>Wed</label><label><input type="checkbox" value="Thu" checked>Thu</label><label><input type="checkbox" value="Fri" checked>Fri</label><label><input type="checkbox" value="Sat" checked>Sat</label><label><input type="checkbox" value="Sun">Sun</label></div><div class="time-picker"><label>Buka <input type="time" class="open-time" value="09:00"></label><label>Tutup <input type="time" class="close-time" value="21:00"></label></div><small class="muted operating-preview">Waktu operasi: Mon-Sat, 9:00 AM - 9:00 PM</small></fieldset></div>
         <label>Alamat / kawasan * <textarea required name="address" placeholder="Dekat kampus, mall, taman..."></textarea></label>
-        <div class="two"><label>Harga B/W A4 per page * <input required type="number" min="0" step="0.01" name="a4_bw_price_per_page" value="0.20"></label><label>Harga color A4 per page * <input required type="number" min="0" step="0.01" name="a4_color_price_per_page" value="1.00"></label></div>
-        <label>Minimum order online * <input required type="number" min="0" step="0.01" name="minimum_order_amount" value="5.00"></label>
+        <label>Link lokasi kedai <input name="google_maps_url" type="url" placeholder="https://maps.google.com/..."><small class="muted">Optional. Paste link lokasi kedai dari Google Maps atau Waze.</small></label>
+        <div class="dashboard-account-block"><p class="eyebrow">Akaun dashboard owner</p><h3>Login untuk urus order kedai</h3><p class="muted">Email login: <b>${escapeHtml(subscription.email)}</b></p><div class="two"><label>Password dashboard * <input required name="password" type="password" minlength="6" autocomplete="new-password"></label><label>Sahkan password * <input required name="password_confirm" type="password" minlength="6" autocomplete="new-password"></label></div></div>
         <button>Jana Link Kedai</button>
-        <p class="form-reassurance">Slot pickup asas akan disediakan automatik dan boleh dikemas kini kemudian.</p>
+        <p class="form-reassurance">Slot pickup asas dan harga default akan disediakan dahulu. Harga boleh dikemas kini kemudian dalam dashboard owner.</p>
       </form>
       <aside class="card setup-preview">
         <p class="eyebrow">Preview link</p>
@@ -448,6 +500,11 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
       const shopNameInput = document.querySelector('input[name="shop_name"]');
       const slugInput = document.querySelector('input[name="slug"]');
       const previews = document.querySelectorAll('.slug-preview');
+      const operatingInput = document.querySelector('input[name="operating_hours"]');
+      const operatingPreview = document.querySelector('.operating-preview');
+      const dayInputs = [...document.querySelectorAll('.day-picker input[type="checkbox"]')];
+      const openTime = document.querySelector('.open-time');
+      const closeTime = document.querySelector('.close-time');
       let slugTouched = false;
       function toSlug(value) {
         return String(value || '').toLowerCase().trim().replace(/['"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
@@ -455,6 +512,29 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
       function syncSlugPreview() {
         const slug = toSlug(slugInput?.value) || 'nama-kedai';
         previews.forEach((preview) => preview.textContent = slug);
+      }
+      function formatTime(value) {
+        const [hourRaw, minute = '00'] = String(value || '').split(':');
+        const hour = Number(hourRaw);
+        if (!Number.isFinite(hour)) return '';
+        const suffix = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return displayHour + ':' + minute + ' ' + suffix;
+      }
+      function formatDays(days) {
+        const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        if (days.length === 6 && days.every((day, index) => day === order[index])) return 'Mon-Sat';
+        if (days.length === 7) return 'Mon-Sun';
+        return days.join(', ');
+      }
+      function syncOperatingHours() {
+        const days = dayInputs.filter((input) => input.checked).map((input) => input.value);
+        const dayLabel = formatDays(days) || 'Hari belum dipilih';
+        const start = formatTime(openTime?.value || '09:00');
+        const end = formatTime(closeTime?.value || '21:00');
+        const value = dayLabel + ', ' + start + ' - ' + end;
+        if (operatingInput) operatingInput.value = value;
+        if (operatingPreview) operatingPreview.textContent = 'Waktu operasi: ' + value;
       }
       shopNameInput?.addEventListener('input', () => {
         if (!slugTouched && slugInput) slugInput.value = toSlug(shopNameInput.value);
@@ -465,7 +545,11 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
         slugInput.value = toSlug(slugInput.value);
         syncSlugPreview();
       });
+      dayInputs.forEach((input) => input.addEventListener('change', syncOperatingHours));
+      openTime?.addEventListener('input', syncOperatingHours);
+      closeTime?.addEventListener('input', syncOperatingHours);
       syncSlugPreview();
+      syncOperatingHours();
     </script>
   </main>`);
 }

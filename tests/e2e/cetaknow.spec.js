@@ -167,21 +167,31 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
   await expect(page.getByText('Sekarang setup page kedai anda.')).toBeVisible();
   await page.fill('input[name="shop_name"]', 'Student Print Test');
   await expect(page.locator('input[name="slug"]')).toHaveValue('student-print-test');
-  await page.fill('input[name="operating_hours"]', 'Mon-Sat, 9:00 AM - 8:00 PM');
+  await expect(page.locator('input[name="operating_hours"]')).toHaveValue('Mon-Sat, 9:00 AM - 9:00 PM');
+  await expect(page.locator('input[name="a4_bw_price_per_page"]')).toHaveCount(0);
+  await expect(page.locator('input[name="a4_color_price_per_page"]')).toHaveCount(0);
+  await expect(page.locator('input[name="minimum_order_amount"]')).toHaveCount(0);
   await page.fill('textarea[name="address"]', 'Kawasan kampus test');
+  await expect(page.locator('input[type="url"][name="google_maps_url"]')).toHaveCount(1);
+  await page.fill('input[name="google_maps_url"]', 'https://maps.google.com/?q=student+print+test');
+  await expect(page.getByText('Email login:')).toBeVisible();
+  await page.fill('input[name="password"]', 'student123');
+  await page.fill('input[name="password_confirm"]', 'student123');
   await page.getByRole('button', { name: 'Jana Link Kedai' }).click();
   await expect(page).toHaveURL(/\/subscriptions\/CN-SUB-1001\/confirmation/);
   await expect(page.getByText('Link CetakNow kedai anda sudah dijana.')).toBeVisible();
   await expect(page.getByRole('link', { name: '/shop/student-print-test' })).toHaveAttribute('href', '/shop/student-print-test');
   await page.goto('/shop/student-print-test');
+  await expect(page.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', 'https://maps.google.com/?q=student+print+test');
   await expect(page.getByRole('heading', { name: 'Student Print Test Online Print Order' })).toBeVisible();
   await expect(page.getByText('A4 B/W: RM0.20 / page')).toBeVisible();
 
-  await login(page, 'owner@cetaknow.local');
-  await expect(page.getByRole('heading', { name: 'Subscriptions' })).toBeVisible();
-  await expect(page.getByText('CN-SUB-1001')).toBeVisible();
-  await expect(page.getByText('owner@studentprint.test')).toBeVisible();
-  await expect(page.getByText('RM499.00')).toBeVisible();
+  await page.goto('/login');
+  await page.fill('input[name="email"]', 'owner@studentprint.test');
+  await page.fill('input[name="password"]', 'student123');
+  await page.getByRole('button', { name: 'Log Masuk' }).click();
+  await expect(page.getByRole('heading', { name: 'Ringkasan' })).toBeVisible();
+  await expect(page.getByText('Student Print Test Dashboard')).toBeVisible();
 });
 
 test('public shop page renders branding, pricing, and mobile-safe form basics', async ({ page }) => {
@@ -246,6 +256,19 @@ test('happy path: customer pays, confirmation shown, shop admin sees order with 
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Download PDF' }).click();
   expect((await download).suggestedFilename()).toContain('one-page.pdf');
+});
+
+test('shop admin sidebar opens Langganan page with plan and public shop link', async ({ page }) => {
+  await login(page, 'admin@qalamirma.local');
+  await expect(page.getByRole('link', { name: /Langganan/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Link Kedai/ })).toHaveCount(0);
+
+  await page.getByRole('link', { name: /Langganan/ }).click();
+  await expect(page).toHaveURL('/admin/subscription');
+  await expect(page.getByRole('heading', { name: 'Langganan' })).toBeVisible();
+  await expect(page.getByText('Pilot')).toBeVisible();
+  await expect(page.getByRole('link', { name: '/shop/qalamirma' })).toHaveAttribute('href', '/shop/qalamirma');
+  await expect(page.getByRole('link', { name: 'Buka Link Kedai' })).toHaveAttribute('href', '/shop/qalamirma');
 });
 
 test('shop admin can update order status lifecycle', async ({ page }) => {

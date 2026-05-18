@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -58,6 +58,7 @@ export async function app(req, res) {
     if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db, url.searchParams.get('updated') === '1', Number.parseInt(url.searchParams.get('page') || '1', 10));
     if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db, url.searchParams.get('date') || '', Number.parseInt(url.searchParams.get('page') || '1', 10));
+    if (req.method === 'GET' && url.pathname === '/admin/subscription') return renderSubscriptionAdmin(req, res, db);
     const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
     if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
@@ -164,8 +165,12 @@ function renderSubscriptionConfirmation(res, db, code) {
 async function setupSubscriptionShop(req, res, code) {
   const form = await parseForm(req);
   const slugBase = slugify(form.slug || form.shop_name);
+  const password = String(form.password || '');
+  const passwordConfirm = String(form.password_confirm || '');
   if (!String(form.shop_name || '').trim()) throw Object.assign(new Error('Nama kedai diperlukan'), { status: 400 });
   if (!slugBase) throw Object.assign(new Error('Slug kedai tidak sah'), { status: 400 });
+  if (password.length < 6) throw Object.assign(new Error('Password dashboard mesti sekurang-kurangnya 6 aksara'), { status: 400 });
+  if (password !== passwordConfirm) throw Object.assign(new Error('Password dashboard tidak sama'), { status: 400 });
 
   await tx(async (db) => {
     const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
@@ -174,6 +179,7 @@ async function setupSubscriptionShop(req, res, code) {
     if (existingShop) return existingShop.slug;
 
     db.shops ||= [];
+    db.users ||= [];
     db.shop_pricing ||= [];
     db.pickup_slots ||= [];
     const createdAt = nowIso();
@@ -188,11 +194,11 @@ async function setupSubscriptionShop(req, res, code) {
       primary_color: '#062b66',
       description: `Upload PDF, pilih tetapan print, bayar online, dan ambil dokumen anda di ${shopName}.`,
       address: String(form.address || '').trim(),
-      google_maps_url: 'https://maps.google.com/',
+      google_maps_url: String(form.google_maps_url || '').trim() || 'https://maps.google.com/',
       phone: String(form.phone || subscription.phone || '').trim(),
       email: subscription.email,
       operating_hours: String(form.operating_hours || '').trim(),
-      minimum_order_amount: positiveMoney(form.minimum_order_amount, 5),
+      minimum_order_amount: 5,
       is_active: true,
       plan: subscription.plan,
       subscription_status: 'active',
@@ -203,8 +209,8 @@ async function setupSubscriptionShop(req, res, code) {
     db.shop_pricing.push({
       id: id('pricing'),
       shop_id: shop.id,
-      a4_bw_price_per_page: positiveMoney(form.a4_bw_price_per_page, 0.2),
-      a4_color_price_per_page: positiveMoney(form.a4_color_price_per_page, 1),
+      a4_bw_price_per_page: 0.2,
+      a4_color_price_per_page: 1,
       created_at: createdAt,
       updated_at: createdAt
     });
@@ -222,6 +228,25 @@ async function setupSubscriptionShop(req, res, code) {
           updated_at: createdAt
         });
       }
+    }
+    const existingUser = db.users.find((u) => String(u.email).toLowerCase() === String(subscription.email).toLowerCase());
+    if (existingUser && existingUser.role !== 'super_admin') {
+      existingUser.name = existingUser.name || `${shopName} Owner`;
+      existingUser.password = password;
+      existingUser.role = 'shop_admin';
+      existingUser.shop_id = shop.id;
+      existingUser.updated_at = createdAt;
+    } else if (!existingUser) {
+      db.users.push({
+        id: id('user'),
+        name: `${shopName} Owner`,
+        email: subscription.email,
+        password,
+        role: 'shop_admin',
+        shop_id: shop.id,
+        created_at: createdAt,
+        updated_at: createdAt
+      });
     }
     subscription.shop_id = shop.id;
     subscription.updated_at = createdAt;
@@ -365,6 +390,19 @@ function renderRevenue(req, res, db, selectedDate = '', page = 1) {
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id);
   const payments = (db.payments || []).filter((p) => p.shop_id === user.shop_id);
   send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders', selectedDate, page }));
+}
+
+function renderSubscriptionAdmin(req, res, db) {
+  const user = requireUser(req, db);
+  if (!user) return redirect(res, '/login');
+  if (user.role === 'super_admin') return redirect(res, '/admin');
+  const shop = db.shops.find((s) => s.id === user.shop_id);
+  if (!shop) return notFound(res);
+  const subscription = (db.subscriptions || [])
+    .filter((s) => s.shop_id === shop.id)
+    .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))[0] || null;
+  const payment = subscription ? (db.payments || []).find((p) => p.subscription_id === subscription.id) : null;
+  send(res, 200, subscriptionPage({ user, shop, subscription, payment }));
 }
 
 function renderShopsManagement(req, res, db) {
