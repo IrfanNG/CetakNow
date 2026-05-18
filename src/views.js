@@ -87,7 +87,7 @@ export function landingPage({ leadCount = 0 } = {}) {
 
     <footer class="quote-section final-cta footer-cta dark">
       <div class="footer-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><p>Platform tempahan print online untuk kedai kecil yang mahu order lebih kemas, bayaran jelas, dan pickup lebih tersusun.</p></div>
-      <div class="footer-main"><p class="quote-kicker">Langgan CetakNow</p><h2>Sedia susun order print kedai anda?</h2><p>Bawa pelanggan dari WhatsApp berselerak ke satu sistem order yang lebih mudah dikawal.</p><div class="footer-actions"><a class="quote-button white" href="#pricing">Daftar Sekarang</a><a class="footer-login" href="/login">Log Masuk Admin</a></div></div>
+      <div class="footer-main"><p class="quote-kicker">Langgan CetakNow</p><h2>Sedia susun order print kedai anda?</h2><p>Bawa pelanggan dari WhatsApp berselerak ke satu sistem order yang lebih mudah dikawal.</p><div class="footer-actions"><a class="quote-button white" href="#pricing">Daftar Sekarang</a><a class="footer-login" href="/login">Log Masuk</a></div></div>
       <div class="footer-trust"><span>Bayaran online</span><span>Fail dipadam automatik</span><span>Dashboard order</span></div>
       <nav class="footer-links" aria-label="Footer navigation"><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a></nav>
       <p class="footer-bottom">© 2026 CetakNow. Print Online, Pay Online, Pick Up Easy.</p>
@@ -205,7 +205,7 @@ export function confirmationPage(order, shop, slot) {
 }
 
 export function loginPage(error = '') {
-  return layout('CetakNow Login', `<main class="page narrow"><form class="card form" method="post" action="/login"><h1>Admin Login</h1>${error ? `<div class="alert">${escapeHtml(error)}</div>` : ''}<label>Email <input name="email" type="email" required></label><label>Password <input name="password" type="password" required></label><button>Login</button><p class="muted">Demo: owner@cetaknow.local / password · admin@qalamirma.local / password</p></form></main>`);
+  return layout('CetakNow Login', `<main class="login-page"><section class="login-shell"><div class="login-brand-panel"><a class="login-logo" href="/" aria-label="CetakNow home"><img src="/public/assets/primary-logo.png" alt="CetakNow"></a><p class="quote-kicker">Admin access</p><h1>Log Masuk Admin</h1><p>Urus order, bayaran, fail PDF, dan pickup slot kedai dari satu dashboard yang tersusun.</p><div class="login-trust"><span>Bayaran dahulu</span><span>Dashboard order</span><span>Link kedai sendiri</span></div></div><form class="login-card" method="post" action="/login"><div class="login-form-head"><p class="quote-kicker">CetakNow Dashboard</p><h2>Akses dashboard kedai</h2></div>${error ? `<div class="alert">${escapeHtml(error)}</div>` : ''}<label>Email <input name="email" type="email" autocomplete="email" required></label><label>Password <input name="password" type="password" autocomplete="current-password" required></label><button>Log Masuk</button><div class="login-subscribe"><p>Belum ada akaun kedai?</p><a href="/#pricing">Belum ada akaun? Langgan</a></div><p class="muted login-demo">Demo: owner@cetaknow.local / password · admin@qalamirma.local / password</p></form></section></main>`);
 }
 
 function statusClass(value = '') {
@@ -218,10 +218,11 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
   const item = (key, href, icon, label, hint = '') => `<a class="admin-side-item ${active === key ? 'active' : ''}" href="${href}" aria-current="${active === key ? 'page' : 'false'}"><span class="side-icon ${icon}" aria-hidden="true"></span><em>${label}${hint ? `<small>${hint}</small>` : ''}</em></a>`;
   return `<main class="admin-layout">
     <aside class="admin-sidebar">
-      <div class="admin-brand"><b>CETAKNOW</b><span>${escapeHtml(role)}</span></div>
+      <div class="admin-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><span>${escapeHtml(role)}</span></div>
       <nav class="admin-side-nav" aria-label="Admin navigation">
         ${item('overview', '/admin', 'home', 'Ringkasan', 'Dashboard')}
         ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Kedai' : 'Order', role === 'Super Admin' ? 'Urus tenant' : 'Senarai kerja')}
+        ${item('revenue', '/admin/revenue', 'revenue', 'Hasil', 'Revenue')}
         ${item('shop', shopLink, 'external', role === 'Super Admin' ? 'Landing' : 'Link Kedai', 'Buka page')}
       </nav>
       <div class="admin-user"><b>${escapeHtml(userLabel || title)}</b><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
@@ -258,34 +259,90 @@ export function shopDashboard({ user, shop, orders }) {
   return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
-export function ordersManagementPage({ user, shop = null, shops = [], orders }) {
+
+function dateParts(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return { day: '', month: '', year: '' };
+  const iso = date.toISOString();
+  return { day: iso.slice(0, 10), month: iso.slice(0, 7), year: iso.slice(0, 4) };
+}
+
+function sumAmount(items) {
+  return items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+}
+
+export function revenuePage({ user, shop = null, shops = [], orders = [], payments = [], subscriptions = [], mode = 'orders' }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const month = today.slice(0, 7);
+  const year = today.slice(0, 4);
+  const source = payments
+    .filter((p) => p.status === 'paid' && p.paid_at)
+    .filter((p) => mode === 'subscriptions' ? p.subscription_id : p.order_id)
+    .map((payment) => {
+      const order = payment.order_id ? orders.find((o) => o.id === payment.order_id) : null;
+      const subscription = payment.subscription_id ? subscriptions.find((s) => s.id === payment.subscription_id) : null;
+      const paymentShop = order ? shops.find((s) => s.id === order.shop_id) : null;
+      return { payment, order, subscription, shop: shop || paymentShop, parts: dateParts(payment.paid_at), amount: Number(payment.amount || 0) };
+    })
+    .sort((a, b) => String(b.payment.paid_at).localeCompare(String(a.payment.paid_at)));
+  const daily = source.filter((item) => item.parts.day === today);
+  const monthly = source.filter((item) => item.parts.month === month);
+  const yearly = source.filter((item) => item.parts.year === year);
+  const rows = source.slice(0, 20).map((item) => {
+    const ref = item.order?.order_code || item.subscription?.subscription_code || item.payment.gateway_reference || item.payment.id;
+    const sourceLabel = mode === 'subscriptions'
+      ? `${item.subscription?.plan_label || 'Langganan'}${item.shop ? ` · ${escapeHtml(item.shop.name)}` : ''}`
+      : `${item.order?.customer_name ? escapeHtml(item.order.customer_name) : 'Order print'}${item.order?.customer_phone ? `<small>${escapeHtml(item.order.customer_phone)}</small>` : ''}`;
+    return `<tr><td>${new Date(item.payment.paid_at).toLocaleString()}</td><td><b>${escapeHtml(ref)}</b></td><td>${sourceLabel}</td><td><b>${formatMoney(item.amount)}</b></td></tr>`;
+  }).join('');
+  const title = 'Ringkasan Hasil';
+  const subtitle = mode === 'subscriptions' ? 'Revenue langganan platform' : `${shop?.name || 'Kedai'} Revenue`;
+  const body = `<section class="admin-kpi-grid revenue-kpis">
+      ${metricCard('Hasil Hari Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true)}
+      ${metricCard('Bulan Ini', formatMoney(sumAmount(monthly)), 'blue', 'paid')}
+      ${metricCard('Tahun Ini', formatMoney(sumAmount(yearly)), 'yellow', 'alert')}
+      ${metricCard('Jumlah Transaksi', source.length, 'green', 'check')}
+    </section>
+    <section class="admin-panel revenue-panel"><div class="panel-head"><div><p class="eyebrow">Pemantauan hasil</p><h2>${mode === 'subscriptions' ? 'Langganan Berbayar' : 'Order Berbayar'}</h2></div><span>${source.length} transaksi</span></div><div class="table-wrap"><table><thead><tr><th>Paid At</th><th>Reference</th><th>Source</th><th>Amount</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="4"><b>Belum ada hasil berbayar.</b><span>Transaksi akan muncul selepas bayaran berjaya.</span></td></tr>'}</tbody></table></div></section>`;
+  const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
+  return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: 'revenue', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
+}
+
+export function ordersManagementPage({ user, shop = null, shops = [], orders, updated = false, page = 1 }) {
   const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
   const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
   const today = new Date().toISOString().slice(0, 10);
   const todayPickups = orders.filter((o) => o.pickup_date === today).length;
-  const rows = orders.map((o) => {
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(totalOrders / pageSize));
+  const currentPage = Math.min(Math.max(Number.isFinite(page) ? page : 1, 1), totalPages);
+  const pageOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rows = pageOrders.map((o) => {
     const orderShop = shop || shops.find((s) => s.id === o.shop_id);
     const customer = `<b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small>`;
     const shopCell = orderShop ? `<small>${escapeHtml(orderShop.name)}</small>` : '';
     return `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a>${shopCell}</td><td>${customer}</td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td><td><a class="table-action neutral" href="/admin/orders/${o.id}">Urus</a></td></tr>`;
   }).join('');
-  const body = `<section class="admin-kpi-grid">
+  const pagination = totalOrders > pageSize ? `<div class="table-pagination"><a class="page-link ${currentPage === 1 ? 'disabled' : ''}" ${currentPage === 1 ? 'aria-disabled="true"' : `href="/admin/orders?page=${currentPage - 1}"`}>Sebelumnya</a><span>Page ${currentPage} / ${totalPages}</span><a class="page-link ${currentPage === totalPages ? 'disabled' : ''}" ${currentPage === totalPages ? 'aria-disabled="true"' : `href="/admin/orders?page=${currentPage + 1}"`}>Seterusnya</a></div>` : '';
+  const successBanner = updated ? '<div class="admin-success" role="status">Status order berjaya dikemaskini.</div>' : '';
+  const body = `${successBanner}<section class="admin-kpi-grid">
       ${metricCard('Total Order', totalOrders, 'red', 'orders', true)}
       ${metricCard('Order Aktif', activeOrders, 'blue', 'paid')}
       ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
       ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
     </section>
-    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan kerja</p><h2>Senarai Order</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="8"><b>Belum ada order.</b><span>Order pelanggan akan muncul di sini selepas checkout.</span></td></tr>'}</tbody></table></div></section>`;
+    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan kerja</p><h2>Senarai Order</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="8"><b>Belum ada order.</b><span>Order pelanggan akan muncul di sini selepas checkout.</span></td></tr>'}</tbody></table></div>${pagination}</section>`;
   const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
   const title = 'Pengurusan Order';
   const subtitle = shop ? `${shop.name} Dashboard` : 'Semua order platform';
   return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: user.role === 'super_admin' ? '' : 'orders', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
 }
 
-export function orderDetails({ order, shop, slot, user }) {
+export function orderDetails({ order, shop, slot, user, updated = false }) {
   const statuses = ['Paid / New Order', 'Printing', 'Ready for Pickup', 'Completed', 'Cancelled', 'File Problem'].map((s) => `<option ${order.order_status === s ? 'selected' : ''}>${s}</option>`).join('');
-  const body = `<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="detail-actions"><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a><a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
+  const successBanner = updated ? '<div class="admin-success" role="status">Status order berjaya dikemaskini.</div>' : '';
+  const body = `${successBanner}<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="detail-actions"><a class="button" href="/admin/orders/${order.id}/download">Download PDF</a><a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
   return layout(order.order_code, adminShell({ title: order.order_code, subtitle: 'Order detail', userLabel: user?.email || shop.name, active: 'orders', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 

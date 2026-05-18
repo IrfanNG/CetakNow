@@ -10,7 +10,7 @@ import { isSlotAvailable } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopPage, shopsManagementPage, subscriptionConfirmationPage, superDashboard } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
@@ -56,11 +56,12 @@ export async function app(req, res) {
 
     if (req.method === 'GET' && url.pathname === '/admin') return renderAdmin(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
-    if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db, url.searchParams.get('updated') === '1', Number.parseInt(url.searchParams.get('page') || '1', 10));
+    if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db);
     const shopStatusMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)\/status$/);
     if (req.method === 'POST' && shopStatusMatch) return await toggleShopStatus(req, res, shopStatusMatch[1]);
     const detailMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)$/);
-    if (req.method === 'GET' && detailMatch) return renderOrderDetail(req, res, db, detailMatch[1]);
+    if (req.method === 'GET' && detailMatch) return renderOrderDetail(req, res, db, detailMatch[1], url.searchParams.get('updated') === '1');
     const statusMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/status$/);
     if (req.method === 'POST' && statusMatch) return await updateOrderStatus(req, res, statusMatch[1]);
     const downloadMatch = url.pathname.match(/^\/admin\/orders\/([^/]+)\/download$/);
@@ -353,22 +354,35 @@ function renderAdmin(req, res, db) {
   send(res, 200, shopDashboard({ user, shop, orders }));
 }
 
+
+function renderRevenue(req, res, db) {
+  const user = requireUser(req, db);
+  if (!user) return redirect(res, '/login');
+  if (user.role === 'super_admin') {
+    return send(res, 200, revenuePage({ user, shops: db.shops, orders: db.orders, payments: db.payments || [], subscriptions: db.subscriptions || [], mode: 'subscriptions' }));
+  }
+  const shop = db.shops.find((s) => s.id === user.shop_id);
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id);
+  const payments = (db.payments || []).filter((p) => p.shop_id === user.shop_id);
+  send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders' }));
+}
+
 function renderShopsManagement(req, res, db) {
   const user = requireUser(req, db, 'super_admin');
   if (!user) return notFound(res);
   send(res, 200, shopsManagementPage({ user, shops: db.shops, orders: db.orders }));
 }
 
-function renderOrdersManagement(req, res, db) {
+function renderOrdersManagement(req, res, db, updated = false, page = 1) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
   if (user.role === 'super_admin') {
     const orders = [...db.orders].sort((a, b) => b.created_at.localeCompare(a.created_at));
-    return send(res, 200, ordersManagementPage({ user, shops: db.shops, orders }));
+    return send(res, 200, ordersManagementPage({ user, shops: db.shops, orders, updated, page }));
   }
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
-  send(res, 200, ordersManagementPage({ user, shop, orders }));
+  send(res, 200, ordersManagementPage({ user, shop, orders, updated, page }));
 }
 
 async function toggleShopStatus(req, res, shopId) {
@@ -387,14 +401,14 @@ function canAccessOrder(user, order) {
   return user?.role === 'super_admin' || (user?.role === 'shop_admin' && user.shop_id === order.shop_id);
 }
 
-function renderOrderDetail(req, res, db, orderId) {
+function renderOrderDetail(req, res, db, orderId, updated = false) {
   const user = requireUser(req, db);
   const order = db.orders.find((o) => o.id === orderId);
   if (!user) return redirect(res, '/login');
   if (!order || !canAccessOrder(user, order)) return notFound(res);
   const shop = db.shops.find((s) => s.id === order.shop_id);
   const slot = db.pickup_slots.find((s) => s.id === order.pickup_slot_id);
-  send(res, 200, orderDetails({ order, shop, slot, user }));
+  send(res, 200, orderDetails({ order, shop, slot, user, updated }));
 }
 
 async function updateOrderStatus(req, res, orderId) {
@@ -409,7 +423,7 @@ async function updateOrderStatus(req, res, orderId) {
     order.order_status = form.order_status;
     order.updated_at = nowIso();
   });
-  redirect(res, `/admin/orders/${orderId}`);
+  redirect(res, '/admin/orders?updated=1');
 }
 
 async function downloadOrderFile(req, res, db, orderId) {

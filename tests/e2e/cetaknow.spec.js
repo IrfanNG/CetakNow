@@ -40,16 +40,57 @@ async function createPaidOrder(page, options = {}) {
   await expect(page.getByText('Your print order has been received.')).toBeVisible();
 }
 
+
+async function seedPaidOrders(count = 12) {
+  const db = JSON.parse(await fs.readFile('data/db.json', 'utf8'));
+  db.orders = Array.from({ length: count }, (_, i) => {
+    const number = i + 1;
+    const code = `CN-QI-${String(1000 + number).padStart(4, '0')}`;
+    return {
+      id: `order_${number}`,
+      shop_id: 'shop_qalamirma',
+      order_code: code,
+      customer_name: `Customer ${number}`,
+      customer_phone: `601000000${String(number).padStart(2, '0')}`,
+      customer_email: `customer${number}@example.test`,
+      original_file_name: 'one-page.pdf',
+      file_path: 'storage/pdfs/.gitkeep',
+      page_count: 1,
+      print_type: 'bw',
+      sides: 'single',
+      copies: 5,
+      total_amount: 5,
+      payment_status: 'paid',
+      order_status: number % 2 ? 'Paid / New Order' : 'Ready for Pickup',
+      pickup_date: '2030-01-07',
+      pickup_slot_id: 'slot_qi_d1_1',
+      notes: '',
+      file_delete_at: '2030-01-14T00:00:00.000Z',
+      created_at: `2026-05-${String(number).padStart(2, '0')}T00:00:00.000Z`,
+      updated_at: `2026-05-${String(number).padStart(2, '0')}T00:00:00.000Z`
+    };
+  });
+  await fs.writeFile('data/db.json', JSON.stringify(db, null, 2));
+}
+
 async function login(page, email) {
   await page.goto('/login');
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', 'password');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('button', { name: 'Log Masuk' }).click();
   await expect(page).toHaveURL('/admin');
 }
 
 test.beforeEach(async () => {
   await resetDb();
+});
+
+
+test('login page matches CetakNow theme and routes new owners to pricing', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Log Masuk Admin' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log Masuk' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Belum ada akaun? Langgan' })).toHaveAttribute('href', '/#pricing');
 });
 
 test('landing page explains SaaS and routes CTAs to pricing', async ({ page }) => {
@@ -74,7 +115,7 @@ test('landing page explains SaaS and routes CTAs to pricing', async ({ page }) =
   await expect(page.locator('.footer-trust').getByText('Bayaran online')).toBeVisible();
   await expect(page.locator('.footer-trust').getByText('Fail dipadam automatik')).toBeVisible();
   await expect(page.locator('.footer-trust').getByText('Dashboard order')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Log Masuk Admin' })).toHaveAttribute('href', '/login');
+  await expect(page.getByRole('link', { name: 'Log Masuk' })).toHaveAttribute('href', '/login');
 });
 
 
@@ -185,8 +226,49 @@ test('shop admin can update order status lifecycle', async ({ page }) => {
   for (const status of ['Printing', 'Ready for Pickup', 'Completed', 'File Problem', 'Cancelled']) {
     await page.selectOption('select[name="order_status"]', status);
     await page.getByRole('button', { name: 'Update status' }).click();
-    await expect(page.locator('select[name="order_status"]')).toHaveValue(status);
+    await expect(page).toHaveURL('/admin/orders?updated=1');
+    await expect(page.getByText('Status order berjaya dikemaskini.')).toBeVisible();
+    await expect(page.locator('tbody').getByText(status)).toBeVisible();
+    await page.getByRole('link', { name: 'Urus' }).click();
   }
+});
+
+test('order management paginates newest orders first', async ({ page }) => {
+  await seedPaidOrders(12);
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/orders');
+  await expect(page.locator('tbody .admin-link').first()).toHaveText('CN-QI-1012');
+  await expect(page.getByRole('link', { name: 'CN-QI-1001' })).toHaveCount(0);
+  await expect(page.getByText('Page 1 / 2')).toBeVisible();
+  await page.getByRole('link', { name: 'Seterusnya' }).click();
+  await expect(page).toHaveURL('/admin/orders?page=2');
+  await expect(page.locator('tbody .admin-link').first()).toHaveText('CN-QI-1002');
+  await expect(page.getByRole('link', { name: 'CN-QI-1001' })).toBeVisible();
+});
+
+test('shop admin can monitor paid order revenue', async ({ page }) => {
+  await createPaidOrder(page, { copies: '10', printType: 'color' });
+  await login(page, 'admin@qalamirma.local');
+  await page.goto('/admin/revenue');
+  await expect(page.getByRole('heading', { name: 'Ringkasan Hasil' })).toBeVisible();
+  await expect(page.getByText('Hasil Hari Ini')).toBeVisible();
+  await expect(page.getByText('RM10.00')).toBeVisible();
+  await expect(page.getByText('CN-QI-1001')).toBeVisible();
+});
+
+test('super admin can monitor paid subscription revenue', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Pilih Tahunan' }).click();
+  await page.fill('input[name="email"]', 'owner2@studentprint.test');
+  await page.fill('input[name="phone"]', '60123459999');
+  await page.getByRole('button', { name: 'Teruskan Pembayaran' }).click();
+  await page.getByRole('button', { name: 'Simulate successful payment' }).click();
+  await login(page, 'owner@cetaknow.local');
+  await page.goto('/admin/revenue');
+  await expect(page.getByRole('heading', { name: 'Ringkasan Hasil' })).toBeVisible();
+  await expect(page.getByText('Langganan Berbayar')).toBeVisible();
+  await expect(page.getByText('RM499.00')).toBeVisible();
+  await expect(page.getByText('CN-SUB-1001')).toBeVisible();
 });
 
 test('super admin sees SaaS metrics and Qalam Irma tenant', async ({ page }) => {
