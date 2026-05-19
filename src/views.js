@@ -159,7 +159,7 @@ export function shopPage({ shop, pricing, slots, products = [], paperSizes = [],
     <section class="shop-order-grid">
       <form class="shop-order-card" action="/shop/${shop.slug}/orders" method="post" enctype="multipart/form-data">
         <div class="form-head"><p class="eyebrow">Order form</p><h2>Tempah Print Online</h2></div>
-        <div class="field-block"><label>PDF file(s) <input required multiple type="file" name="pdf" accept="application/pdf,.pdf"></label><small>Muat naik sehingga 10 fail PDF. Harga dikira ikut jumlah halaman semua fail.</small></div>
+        <div class="field-block"><label>PDF file(s) <input required multiple type="file" name="pdf" accept="application/pdf,.pdf"></label></div>
         <div class="two"><label>Paper size <select name="paper_size_id">${paperSizeOptions}</select></label><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(firstPaperSize.bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(firstPaperSize.color_price_per_page)}/page)</option></select></label></div>
         <label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label>
         <label>Copies <input required type="number" name="copies" min="1" value="1"></label>
