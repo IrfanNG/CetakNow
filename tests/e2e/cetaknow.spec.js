@@ -145,7 +145,7 @@ test('landing page explains SaaS and routes CTAs to pricing', async ({ page }) =
   await expect(page.locator('.footer-trust').getByText('Bayaran online')).toBeVisible();
   await expect(page.locator('.footer-trust').getByText('Fail dipadam automatik')).toBeVisible();
   await expect(page.locator('.footer-trust').getByText('Dashboard order')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Log Masuk' })).toHaveAttribute('href', '/login');
+  await expect(page.getByRole('link', { name: 'Log Masuk' }).first()).toHaveAttribute('href', '/login');
 });
 
 
@@ -198,6 +198,7 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
   await page.fill('input[name="password"]', 'student123');
   await page.getByRole('button', { name: 'Log Masuk' }).click();
   await expect(page.getByRole('heading', { name: 'Ringkasan' })).toBeVisible();
+  await expect(page.locator('.admin-ratio')).toHaveCount(0);
   await expect(page.getByText('Student Print Test Dashboard')).toBeVisible();
 });
 
@@ -254,6 +255,8 @@ test('happy path: customer pays, confirmation shown, shop admin sees order with 
 
   await login(page, 'admin@qalamirma.local');
   await expect(page.getByText('Qalam Irma Dashboard')).toBeVisible();
+  await expect(page.getByText('Ringkasan Live')).toHaveCount(1);
+  await expect(page.locator('.admin-conversion')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'CN-QI-1001' })).toBeVisible();
   await page.getByRole('link', { name: 'CN-QI-1001' }).click();
   await expect(page.getByRole('heading', { name: 'CN-QI-1001' })).toBeVisible();
@@ -280,6 +283,15 @@ test('customer can upload multiple PDF files in one order', async ({ page }) => 
   const download = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Download PDF 2' }).click();
   expect((await download).suggestedFilename()).toContain('one-page.pdf');
+});
+
+test('shop admin dashboard keeps only the live summary band', async ({ page }) => {
+  await login(page, 'admin@qalamirma.local');
+  await expect(page.getByText('Qalam Irma Dashboard')).toBeVisible();
+  await expect(page.getByText('Ringkasan Live')).toBeVisible();
+  await expect(page.locator('.admin-conversion')).toHaveCount(0);
+  await expect(page.locator('.admin-ratio')).toHaveCount(0);
+  await expect(page.getByText('Order Masuk')).toBeVisible();
 });
 
 test('shop admin sidebar opens Langganan page with plan and public shop link', async ({ page }) => {
@@ -336,6 +348,7 @@ test('shop admin can manage shop information and pricing without changing public
 test('shop admin can add order add-ons and customer total includes selected products', async ({ page }) => {
   await login(page, 'admin@qalamirma.local');
   await page.goto('/admin/settings');
+  await page.locator('details.settings-accordion').nth(1).locator('summary').click();
   await page.fill('input[name="name"][placeholder="Contoh: Binding"]', 'Binding');
   await page.fill('input[name="description"][placeholder="Comb bind / cover / laminate"]', 'Comb binding siap pickup');
   await page.fill('form[action="/admin/products"] input[name="price"]', '2.00');
@@ -343,7 +356,7 @@ test('shop admin can add order add-ons and customer total includes selected prod
   await expect(page).toHaveURL('/admin/settings?updated=1');
 
   await fillValidOrder(page, { copies: '5', printType: 'color', notes: 'with binding' });
-  await expect(page.getByText('Binding')).toBeVisible();
+  await expect(page.getByText('Binding', { exact: true })).toBeVisible();
   await expect(page.getByText('Comb binding siap pickup')).toBeVisible();
   await page.getByLabel(/Binding/).check();
   await page.getByRole('button', { name: 'Teruskan ke Pembayaran' }).click();
@@ -480,12 +493,16 @@ test('super admin can monitor paid subscription revenue', async ({ page }) => {
 });
 
 test('super admin sees SaaS metrics and Qalam Irma tenant', async ({ page }) => {
-  await createPaidOrder(page);
   await login(page, 'owner@cetaknow.local');
+  await page.goto('/admin');
   await expect(page.getByText('CetakNow Super Admin')).toBeVisible();
+  await expect(page.getByText('Ringkasan Live')).toBeVisible();
+  await expect(page.locator('.admin-kpi-grid')).toHaveCount(0);
+  await expect(page.locator('.admin-ratio')).toHaveCount(0);
+  await expect(page.locator('.admin-conversion')).toHaveCount(0);
   await expect(page.getByText('Qalam Irma')).toBeVisible();
   await expect(page.getByText('pilot_free')).toBeVisible();
-  await expect(page.getByText('Jumlah Langganan')).toBeVisible();
+  await expect(page.getByText('FOKUS PLATFORM')).toHaveCount(0);
 });
 
 test('paid order writes email notification log only after payment', async ({ page }) => {

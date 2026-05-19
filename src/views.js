@@ -30,10 +30,10 @@ export function landingPage({ leadCount = 0 } = {}) {
 
     <section id="problems" class="quote-section dark">
       <div class="center-copy"><h2>Masalah Kedai Print</h2><p>Adakah workflow harian kedai anda masih macam ini?</p></div>
-      <div class="quote-card-grid three">
-        <article class="quote-card"><span class="soft-icon">!</span><h3>Order Bercampur Dalam WhatsApp</h3><p>Fail, nota, payment proof, dan pickup time mudah tenggelam dalam chat pelanggan.</p></article>
-        <article class="quote-card"><span class="soft-icon">□</span><h3>Harga Dikira Manual</h3><p>Staff perlu semak page, warna, copies, dan minimum order satu per satu sebelum print.</p></article>
-        <article class="quote-card"><span class="soft-icon">⌁</span><h3>Pickup Tidak Tersusun</h3><p>Pelanggan datang serentak, status order tidak jelas, dan staff perlu ulang semak berkali-kali.</p></article>
+      <div class="problem-rail">
+        <article class="problem-row"><span>01</span><div><h3>Order Bercampur Dalam WhatsApp</h3><p>Fail, nota, payment proof, dan pickup time mudah tenggelam dalam chat pelanggan.</p></div></article>
+        <article class="problem-row"><span>02</span><div><h3>Harga Dikira Manual</h3><p>Staff perlu semak page, warna, copies, dan minimum order satu per satu sebelum print.</p></div></article>
+        <article class="problem-row"><span>03</span><div><h3>Pickup Tidak Tersusun</h3><p>Pelanggan datang serentak, status order tidak jelas, dan staff perlu ulang semak berkali-kali.</p></div></article>
       </div>
     </section>
 
@@ -48,12 +48,21 @@ export function landingPage({ leadCount = 0 } = {}) {
 
     <section class="quote-section white">
       <div class="center-copy"><h2>Untuk Siapa Platform Ini?</h2></div>
-      <div class="quote-card-grid four compact"><article><span>🏪</span><b>Kedai Print Kecil</b></article><article><span>🎓</span><b>Kawasan Kampus</b></article><article><span>📄</span><b>Photostat Shop</b></article><article><span>🧾</span><b>Owner Urus Sendiri</b></article></div>
+      <div class="audience-strip">
+        <span>🏪 Kedai Print Kecil</span>
+        <span>🎓 Kawasan Kampus</span>
+        <span>📄 Photostat Shop</span>
+        <span>🧾 Owner Urus Sendiri</span>
+      </div>
     </section>
 
     <section id="how" class="quote-section dark">
       <div class="center-copy"><h2>Macam Mana Ia Berfungsi?</h2></div>
-      <div class="quote-card-grid three steps-clean"><article><span>1</span><h3>Langgan & Bayar</h3><p>Pilih pelan bulanan atau tahunan, isi email dan telefon, kemudian buat bayaran online.</p></article><article><span>2</span><h3>Setup Page Sendiri</h3><p>Selepas bayar, owner setup sendiri nama kedai, harga print, minimum order, waktu operasi, dan kawasan pickup.</p></article><article><span>3</span><h3>Auto Dapat Link Kedai</h3><p>CetakNow terus jana link kedai khas untuk dikongsi di WhatsApp, bio media sosial, atau poster kedai.</p></article></div>
+      <ol class="steps-rail">
+        <li><span>1</span><div><h3>Langgan & Bayar</h3><p>Pilih pelan bulanan atau tahunan, isi email dan telefon, kemudian buat bayaran online.</p></div></li>
+        <li><span>2</span><div><h3>Setup Page Sendiri</h3><p>Selepas bayar, owner setup sendiri nama kedai, harga print, minimum order, waktu operasi, dan kawasan pickup.</p></div></li>
+        <li><span>3</span><div><h3>Auto Dapat Link Kedai</h3><p>CetakNow terus jana link kedai khas untuk dikongsi di WhatsApp, bio media sosial, atau poster kedai.</p></div></li>
+      </ol>
     </section>
 
     <section class="quote-section security-band section-blue center-copy">
@@ -318,6 +327,19 @@ function metricCard(label, value, tone = 'blue', icon = 'orders', featured = fal
   return `<article class="admin-kpi ${tone} ${featured ? 'featured' : ''}"><div><span>${escapeHtml(label)}</span><b>${value}</b></div><i class="kpi-icon ${icon}" aria-hidden="true"></i></article>`;
 }
 
+function storyBand(title, subtitle, stats = [], cta = '') {
+  const statMarkup = stats.map((stat) => `<div><span>${escapeHtml(stat.label)}</span><b>${stat.value}</b><small>${escapeHtml(stat.hint || '')}</small></div>`).join('');
+  return `<section class="admin-story-band">
+    <div class="admin-story-copy">
+      <p class="eyebrow">Ringkasan live</p>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(subtitle)}</p>
+      ${cta ? `<a class="button" href="${escapeHtml(cta.href)}">${escapeHtml(cta.label)}</a>` : ''}
+    </div>
+    <div class="admin-story-stats">${statMarkup}</div>
+  </section>`;
+}
+
 export function shopDashboardSnapshot({ orders }) {
   const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
@@ -330,12 +352,6 @@ export function shopDashboardSnapshot({ orders }) {
     totalOrders,
     readyOrders,
     todayPickups,
-    kpis: `${metricCard('Order Aktif', activeOrders, 'red', 'orders', true)}
-      ${metricCard('Total Order', totalOrders, 'blue', 'paid')}
-      ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
-      ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}`,
-    insight: `<article class="admin-conversion"><span>FOKUS KAUNTER</span><b>${readyOrders}</b><p>Order sudah sedia untuk pickup. Semak dahulu sebelum pelanggan sampai.</p><a href="/admin/orders">Semak order sekarang</a></article>
-      <article class="admin-ratio"><div><span>Total Order</span><b>${totalOrders}</b></div><div class="bar"><i style="width:${totalOrders ? 100 : 0}%"></i></div><div><span>Masih Diproses</span><b>${activeOrders}</b></div><div class="bar yellow"><i style="width:${totalOrders ? Math.round((activeOrders / totalOrders) * 100) : 0}%"></i></div></article>`,
     orderCountLabel: `${orders.length} total`,
     orderRows: orderRows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'
   };
@@ -343,8 +359,16 @@ export function shopDashboardSnapshot({ orders }) {
 
 export function shopDashboard({ user, shop, orders }) {
   const snapshot = shopDashboardSnapshot({ orders });
-  const body = `<section class="admin-kpi-grid" data-dashboard-kpis>${snapshot.kpis}</section>
-    <section class="admin-insight-grid" data-dashboard-insight>${snapshot.insight}</section>
+  const body = `${storyBand(
+      `${snapshot.readyOrders} order sudah ready untuk pickup`,
+      `${snapshot.activeOrders} order masih bergerak · ${snapshot.todayPickups} pickup hari ini`,
+      [
+        { label: 'Total order', value: snapshot.totalOrders, hint: 'keseluruhan queue' },
+        { label: 'Aktif', value: snapshot.activeOrders, hint: 'belum selesai' },
+        { label: 'Ready pickup', value: snapshot.readyOrders, hint: 'boleh diserahkan' }
+      ],
+      { href: '/admin/orders', label: 'Semak order sekarang' }
+    )}
     <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span data-dashboard-order-count>${snapshot.orderCountLabel}</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody data-dashboard-order-rows>${snapshot.orderRows}</tbody></table></div></section>
     <script>
       let dashboardPoll = null;
@@ -413,38 +437,54 @@ export function shopSettingsPage({ user, shop, pricing = {}, products = [], pape
   <section class="admin-panel settings-panel product-manager">
     <div class="panel-head"><div><p class="eyebrow">Pricing</p><h2>Harga ikut saiz kertas</h2></div><span>Dipaparkan di page order</span></div>
     <div class="product-manager-body">
-      <form class="minimum-order-row" method="post" action="/admin/settings">
-        <label>Minimum online order (RM) <input required type="number" min="0" step="0.01" name="minimum_order_amount" value="${Number(shop.minimum_order_amount ?? 5).toFixed(2)}"></label>
-        <input type="hidden" name="name" value="${escapeHtml(shop.name)}">
-        <input type="hidden" name="phone" value="${escapeHtml(shop.phone)}">
-        <input type="hidden" name="description" value="${escapeHtml(shop.description)}">
-        <input type="hidden" name="address" value="${escapeHtml(shop.address)}">
-        <input type="hidden" name="google_maps_url" value="${escapeHtml(shop.google_maps_url)}">
-        <input type="hidden" name="operating_hours" value="${escapeHtml(shop.operating_hours)}">
-        <input type="hidden" name="primary_color" value="${escapeHtml(shop.primary_color || '#062b66')}">
-        <button type="submit">Simpan Minimum</button>
-      </form>
-      <form class="product-create-row" method="post" action="/admin/paper-sizes">
-        <label>Saiz <input required name="label" placeholder="Contoh: A3"></label>
-        <label>B/W per page (RM) <input required type="number" min="0" step="0.01" name="bw_price_per_page" value="0.00"></label>
-        <label>Color per page (RM) <input required type="number" min="0" step="0.01" name="color_price_per_page" value="0.00"></label>
-        <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
-        <button type="submit">Tambah Saiz</button>
-      </form>
-      <div class="product-edit-list">${paperSizeRows || '<p class="empty-products">Belum ada saiz kertas.</p>'}</div>
+      <details class="settings-accordion" open>
+        <summary>
+          <span>Minimum order & saiz kertas</span>
+          <small>${paperSizes.length} saiz, RM${Number(shop.minimum_order_amount ?? 5).toFixed(2)} minimum</small>
+        </summary>
+        <div class="settings-accordion-body">
+          <form class="minimum-order-row" method="post" action="/admin/settings">
+            <label>Minimum online order (RM) <input required type="number" min="0" step="0.01" name="minimum_order_amount" value="${Number(shop.minimum_order_amount ?? 5).toFixed(2)}"></label>
+            <input type="hidden" name="name" value="${escapeHtml(shop.name)}">
+            <input type="hidden" name="phone" value="${escapeHtml(shop.phone)}">
+            <input type="hidden" name="description" value="${escapeHtml(shop.description)}">
+            <input type="hidden" name="address" value="${escapeHtml(shop.address)}">
+            <input type="hidden" name="google_maps_url" value="${escapeHtml(shop.google_maps_url)}">
+            <input type="hidden" name="operating_hours" value="${escapeHtml(shop.operating_hours)}">
+            <input type="hidden" name="primary_color" value="${escapeHtml(shop.primary_color || '#062b66')}">
+            <button type="submit">Simpan Minimum</button>
+          </form>
+          <form class="product-create-row" method="post" action="/admin/paper-sizes">
+            <label>Saiz <input required name="label" placeholder="Contoh: A3"></label>
+            <label>B/W per page (RM) <input required type="number" min="0" step="0.01" name="bw_price_per_page" value="0.00"></label>
+            <label>Color per page (RM) <input required type="number" min="0" step="0.01" name="color_price_per_page" value="0.00"></label>
+            <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
+            <button type="submit">Tambah Saiz</button>
+          </form>
+          <div class="product-edit-list">${paperSizeRows || '<p class="empty-products">Belum ada saiz kertas.</p>'}</div>
+        </div>
+      </details>
     </div>
   </section>
   <section class="admin-panel settings-panel product-manager">
     <div class="panel-head"><div><p class="eyebrow">Produk / Add-on</p><h2>Produk tambahan order</h2></div><span>Checkbox di page order</span></div>
     <div class="product-manager-body">
-      <form class="product-create-row" method="post" action="/admin/products">
-        <label>Nama produk <input required name="name" placeholder="Contoh: Binding"></label>
-        <label>Description <input name="description" placeholder="Comb bind / cover / laminate"></label>
-        <label>Harga (RM) <input required type="number" min="0" step="0.01" name="price" value="0.00"></label>
-        <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
-        <button type="submit">Tambah Produk</button>
-      </form>
-      <div class="product-edit-list">${productRows || '<p class="empty-products">Belum ada produk add-on.</p>'}</div>
+      <details class="settings-accordion">
+        <summary>
+          <span>Produk tambahan order</span>
+          <small>${products.length} produk add-on</small>
+        </summary>
+        <div class="settings-accordion-body">
+          <form class="product-create-row" method="post" action="/admin/products">
+            <label>Nama produk <input required name="name" placeholder="Contoh: Binding"></label>
+            <label>Description <input name="description" placeholder="Comb bind / cover / laminate"></label>
+            <label>Harga (RM) <input required type="number" min="0" step="0.01" name="price" value="0.00"></label>
+            <label class="check product-active"><input type="checkbox" name="is_active" checked> <span>Aktif</span></label>
+            <button type="submit">Tambah Produk</button>
+          </form>
+          <div class="product-edit-list">${productRows || '<p class="empty-products">Belum ada produk add-on.</p>'}</div>
+        </div>
+      </details>
     </div>
   </section>`;
   return layout('Tetapan Kedai', adminShell({ title: 'Tetapan Kedai', subtitle: `${shop.name} Dashboard`, userLabel: user.email, active: 'settings', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
@@ -570,15 +610,16 @@ export function superDashboard({ shops, orders, subscriptions = [] }) {
     const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
     return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(sub.payment_status)}</span></td><td>${shopCell}</td><td>${new Date(sub.created_at).toLocaleString()}</td></tr>`;
   }).join('');
-  const body = `<section class="admin-kpi-grid">
-      ${metricCard('Jumlah Kedai', shops.length, 'red', 'orders', true)}
-      ${metricCard('Kedai Aktif', activeShops, 'blue', 'paid')}
-      ${metricCard('Jumlah Langganan', successfulSubscriptions, 'yellow', 'alert')}
-    </section>
-    <section class="admin-insight-grid">
-      <article class="admin-conversion"><span>FOKUS PLATFORM</span><b>${successfulSubscriptions}</b><p>Jumlah kedai yang sudah berjaya langgan. Pending belum dikira sebagai langganan.</p><a href="#orders">Semak tenant</a></article>
-      <article class="admin-ratio"><div><span>Kedai Aktif</span><b>${activeShops}</b></div><div class="bar"><i style="width:${shops.length ? Math.round((activeShops / shops.length) * 100) : 0}%"></i></div><div><span>Jumlah Langganan</span><b>${successfulSubscriptions}</b></div><div class="bar yellow"><i style="width:${subscriptions.length ? Math.round((successfulSubscriptions / subscriptions.length) * 100) : 0}%"></i></div></article>
-    </section>
+  const body = `${storyBand(
+      `${activeShops} kedai aktif sedang beroperasi`,
+      `${successfulSubscriptions} langganan berbayar direkodkan · ${shops.length} tenant keseluruhan`,
+      [
+        { label: 'Jumlah kedai', value: shops.length, hint: 'tenant platform' },
+        { label: 'Aktif', value: activeShops, hint: 'sedang online' },
+        { label: 'Langganan', value: successfulSubscriptions, hint: 'bayaran berjaya' }
+      ],
+      { href: '#orders', label: 'Semak tenant' }
+    )}
     <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Kedai</h2></div><span>${shops.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Shop</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div></section>
     <section class="admin-panel lead-table"><div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan</h2></div><span>${subscriptions.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead><tbody>${subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'}</tbody></table></div></section>`;
   return layout('Super Admin', adminShell({ title: 'CetakNow Super Admin', subtitle: 'Ringkasan Platform', userLabel: 'owner@cetaknow.local', role: 'Super Admin', body }));
