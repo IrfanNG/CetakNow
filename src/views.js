@@ -3,137 +3,774 @@ import { formatMoney } from './pricing.js';
 import { labelSlot } from './pickup.js';
 
 export function layout(title, body, color = '#004581') {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title><link rel="stylesheet" href="/public/styles.css"><style>:root{--brand:${color}}</style></head><body>${body}</body></html>`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/styles.css">
+  <style>
+    :root {
+      --brand: ${color};
+      --cn-navy: #062b66;
+      --cn-deep: #071426;
+      --cn-blue: #0b4f9f;
+      --cn-yellow: #ffc20a;
+      --cn-yellow-soft: #fff4c7;
+      --cn-ice: #eaf4ff;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .text-balance {
+      text-wrap: balance;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '${color}',
+            'cn-navy': '#062b66',
+            'cn-deep': '#071426',
+            'cn-blue': '#0b4f9f',
+            'cn-yellow': '#ffc20a',
+            'cn-yellow-soft': '#fff4c7',
+            'cn-ice': '#eaf4ff',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-white text-[#142033] antialiased overflow-x-hidden">${body}</body>
+</html>`;
 }
 
 export function landingPage({ leadCount = 0 } = {}) {
+  const icons = {
+    upload: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>`,
+    calculator: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>`,
+    package: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
+    shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`,
+    store: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>`,
+    grad: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></svg>`,
+    file: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+    user: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    check: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+    lock: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    mail: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+    phone: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    arrow: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`,
+    x: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`
+  };
+
   return layout('CetakNow - Tempahan Print Online Mudah', `
-  <main class="landing landing-blueprint">
-    <nav class="quote-nav">
-      <a class="quote-logo" href="/" aria-label="CetakNow home"><img src="/public/assets/primary-logo.png" alt="CetakNow"></a>
-      <div class="quote-links"><a href="#home">Home</a><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#solution">Penyelesaian</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a><a class="nav-subscribe" href="#pricing">Daftar</a><a class="login-pill" href="/login">Log Masuk</a></div>
+  <main class="relative">
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-lg border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16 md:h-20">
+          <!-- Logo -->
+          <div class="flex-shrink-0 flex items-center">
+            <a href="/" class="flex items-center space-x-2">
+              <img class="h-8 md:h-10 w-auto" src="/public/assets/primary-logo.png" alt="CetakNow">
+            </a>
+          </div>
+          <!-- Desktop nav links -->
+          <div class="hidden md:flex items-center space-x-8">
+            <a href="#about" class="text-slate-600 hover:text-cn-navy font-semibold transition-colors">Tentang</a>
+            <a href="#problems" class="text-slate-600 hover:text-cn-navy font-semibold transition-colors">Masalah</a>
+            <a href="#how" class="text-slate-600 hover:text-cn-navy font-semibold transition-colors">Cara Guna</a>
+            <a href="#pricing" class="text-slate-600 hover:text-cn-navy font-semibold transition-colors">Harga</a>
+          </div>
+          <!-- Desktop buttons + Mobile hamburger -->
+          <div class="flex items-center">
+            <!-- Desktop: Log Masuk + Daftar -->
+            <div class="hidden md:flex items-center space-x-4">
+              <a href="/login" class="px-5 py-2.5 rounded-full border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all text-sm">Log Masuk</a>
+              <a href="#pricing" class="px-6 py-2.5 rounded-full bg-cn-yellow text-cn-deep font-black shadow-lg shadow-cn-yellow/20 hover:scale-[1.02] active:scale-95 transition-all text-sm">Daftar</a>
+            </div>
+            <!-- Mobile: hamburger button -->
+            <button id="mobile-menu-btn" class="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Buka menu">
+              <svg id="menu-icon-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              <svg id="menu-icon-close" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </nav>
 
-    <section id="home" class="quote-hero section-red section-blue">
-      <div class="hero-logo-mark"><img src="/public/assets/icon.png" alt="CetakNow icon"></div>
-      <p class="quote-kicker">Platform tempahan print online</p>
-      <h1>Tempahan Print Online<br><span>Mudah & Tersusun</span></h1>
-      <p class="quote-subtitle">Bantu kedai print terima fail PDF, kira harga, ambil bayaran, dan susun pickup tanpa mesej WhatsApp berselerak.</p>
-      <div class="hero-mini-links"><span>✓ Upload PDF</span><span>✓ Bayar Dahulu</span><span>✓ Slot Pickup</span></div>
-    </section>
-
-    <section id="about" class="quote-section white center-copy">
-      <p class="quote-kicker">Tentang Kami</p>
-      <h2>Apa Itu CetakNow?</h2>
-      <p>CetakNow ialah platform digital ringkas untuk kedai print kecil menerima tempahan online secara lebih teratur. Pelanggan upload PDF, pilih tetapan print, bayar, dan ambil dokumen ikut slot pickup.</p>
-    </section>
-
-    <section id="problems" class="quote-section dark">
-      <div class="center-copy"><h2>Masalah Kedai Print</h2><p>Adakah workflow harian kedai anda masih macam ini?</p></div>
-      <div class="problem-rail">
-        <article class="problem-row"><span>01</span><div><h3>Order Bercampur Dalam WhatsApp</h3><p>Fail, nota, payment proof, dan pickup time mudah tenggelam dalam chat pelanggan.</p></div></article>
-        <article class="problem-row"><span>02</span><div><h3>Harga Dikira Manual</h3><p>Staff perlu semak page, warna, copies, dan minimum order satu per satu sebelum print.</p></div></article>
-        <article class="problem-row"><span>03</span><div><h3>Pickup Tidak Tersusun</h3><p>Pelanggan datang serentak, status order tidak jelas, dan staff perlu ulang semak berkali-kali.</p></div></article>
-      </div>
-    </section>
-
-    <section id="solution" class="quote-section solution-band section-blue">
-      <div class="solution-copy">
-        <p class="quote-kicker">Penyelesaian</p>
-        <h2>Cara CetakNow Membantu Kedai Anda</h2>
-        <ul class="tick-list"><li><b>Link Personal:</b> Kedai dapat satu link khas untuk pelanggan buat order sendiri.</li><li><b>Auto-Calculate:</b> Sistem kira harga berdasarkan page, print type, copies, dan minimum order.</li><li><b>Paid Orders Only:</b> Order diproses selepas bayaran, kurang risiko kerja sia-sia.</li><li><b>Dashboard Staff:</b> Semua order, fail, status, dan pickup slot tersusun dalam satu tempat.</li></ul>
-      </div>
-      <div class="logo-device" aria-label="CetakNow logo preview"><img src="/public/assets/icon.png" alt="CetakNow"><h3>CetakNow</h3><p>Print Online · Pay Online · Pick Up Easy</p></div>
-    </section>
-
-    <section class="quote-section white">
-      <div class="center-copy"><h2>Untuk Siapa Platform Ini?</h2></div>
-      <div class="audience-strip">
-        <span>🏪 Kedai Print Kecil</span>
-        <span>🎓 Kawasan Kampus</span>
-        <span>📄 Photostat Shop</span>
-        <span>🧾 Owner Urus Sendiri</span>
-      </div>
-    </section>
-
-    <section id="how" class="quote-section dark">
-      <div class="center-copy"><h2>Macam Mana Ia Berfungsi?</h2></div>
-      <ol class="steps-rail">
-        <li><span>1</span><div><h3>Langgan & Bayar</h3><p>Pilih pelan bulanan atau tahunan, isi email dan telefon, kemudian buat bayaran online.</p></div></li>
-        <li><span>2</span><div><h3>Setup Page Sendiri</h3><p>Selepas bayar, owner setup sendiri nama kedai, harga print, minimum order, waktu operasi, dan kawasan pickup.</p></div></li>
-        <li><span>3</span><div><h3>Auto Dapat Link Kedai</h3><p>CetakNow terus jana link kedai khas untuk dikongsi di WhatsApp, bio media sosial, atau poster kedai.</p></div></li>
-      </ol>
-    </section>
-
-    <section class="quote-section security-band section-blue center-copy">
-      <div class="lock-icon">⌂</div><h2>Privasi & Keselamatan Fail</h2><p>Fail PDF tidak dipaparkan secara umum. Staff hanya akses melalui dashboard, dan fail dipadam automatik selepas 7 hari.</p><div class="security-tags"><span>Fail Dilindungi</span><span>Upload Peribadi</span><span>Padam Selepas 7 Hari</span></div>
-    </section>
-
-    <section id="pricing" class="quote-section white pricing-zone">
-      <div class="center-copy"><p class="quote-kicker">Harga</p><h2>Harga Telus & Mudah</h2><p>Tiada sistem rumit. Sesuai untuk validasi awal kedai print.</p></div>
-      <div class="pricing-cards">
-        <article class="pricing-card"><h3>Pelan Bulanan</h3><p>Sesuai mula kecil</p><div class="price">RM49<span>/ bulan</span></div><ul class="tick-list"><li>Link kedai sendiri</li><li>Dashboard order</li><li>Bayaran online</li><li>Fail dipadam automatik</li></ul><a class="quote-button outline-blue plan-trigger" href="#subscription-checkout" data-plan="monthly" data-plan-label="Pelan Bulanan" data-amount="49">Langgan Bulanan</a></article>
-        <article class="pricing-card featured"><div class="popular-ribbon">Paling Popular</div><h3>Pelan Tahunan</h3><p>Jimat untuk kedai aktif</p><div class="price">RM499<span>/ tahun</span></div><ul class="tick-list"><li>Semua fungsi pelan bulanan</li><li>Nilai lebih jimat</li><li>Sokongan manual diutamakan</li><li>Fail dipadam automatik</li></ul><a class="quote-button solid-blue plan-trigger" href="#subscription-checkout" data-plan="annual" data-plan-label="Pelan Tahunan" data-amount="499">Pilih Tahunan</a></article>
-      </div>
-      <p class="pricing-note">Harga langganan tetap. Isi email dan telefon, kemudian teruskan bayaran.</p>
-    </section>
-
-    <section id="subscription-checkout" class="subscription-modal" aria-hidden="true">
-      <a class="subscription-backdrop" href="#pricing" aria-label="Tutup checkout"></a>
-      <form class="subscription-dialog" method="post" action="/subscriptions">
-        <div class="subscription-head"><h2>Langgan CetakNow</h2><p><span class="modal-plan-label">Pelan Bulanan</span></p></div>
-        <div class="subscription-body">
-          <input type="hidden" name="plan" value="monthly">
-          <label>Email * <input required type="email" name="email" placeholder="email@contoh.com" autocomplete="email"></label>
-          <label>Nombor Telefon * <input required name="phone" inputmode="tel" autocomplete="tel" pattern="[0-9+ ]{9,16}" placeholder="0123456789"></label>
-          <div class="subscription-total"><span>Harga Pelan</span><b>RM<span class="modal-plan-amount">49</span></b></div>
-          <button>Teruskan Pembayaran</button>
-          <a class="cancel-subscription" href="#pricing">Batal</a>
+    <!-- Mobile menu overlay -->
+    <div id="mobile-menu" class="fixed inset-0 z-50 md:hidden hidden" aria-hidden="true">
+      <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" id="mobile-menu-backdrop"></div>
+      <div class="fixed right-0 top-0 h-full w-72 max-w-[85vw] bg-white shadow-2xl overflow-y-auto">
+        <div class="flex justify-end p-4">
+          <button id="mobile-menu-close" class="flex items-center justify-center w-10 h-10 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors" aria-label="Tutup menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
         </div>
-      </form>
+        <div class="px-6 pb-8 space-y-1">
+          <a href="#about" class="block px-4 py-3 rounded-xl text-slate-700 hover:bg-cn-ice font-semibold transition-colors">Tentang</a>
+          <a href="#problems" class="block px-4 py-3 rounded-xl text-slate-700 hover:bg-cn-ice font-semibold transition-colors">Masalah</a>
+          <a href="#how" class="block px-4 py-3 rounded-xl text-slate-700 hover:bg-cn-ice font-semibold transition-colors">Cara Guna</a>
+          <a href="#pricing" class="block px-4 py-3 rounded-xl text-slate-700 hover:bg-cn-ice font-semibold transition-colors">Harga</a>
+          <hr class="my-4 border-slate-100">
+          <a href="/login" class="block w-full text-center px-5 py-3 rounded-full border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all">Log Masuk</a>
+          <a href="#pricing" class="block w-full text-center px-5 py-3 rounded-full bg-cn-yellow text-cn-deep font-black shadow-lg shadow-cn-yellow/20 hover:scale-[1.02] active:scale-95 transition-all">Daftar</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <header id="home" class="relative overflow-hidden bg-gradient-to-b from-cn-ice via-[#f7fbff] to-white pt-16 pb-24 md:pt-24 md:pb-32">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <div class="flex justify-center mb-8">
+          <img src="/public/assets/icon.png" alt="CetakNow icon" class="h-32 w-auto drop-shadow-2xl animate-[float_6s_ease-in-out_infinite]">
+        </div>
+        <p class="inline-block px-4 py-1.5 rounded-full bg-cn-blue/10 text-cn-blue text-xs font-black tracking-widest uppercase mb-6">Platform Tempahan Print Online</p>
+        <h1 class="text-4xl md:text-6xl lg:text-7xl font-black text-cn-deep tracking-tight text-balance leading-[0.9] mb-8">
+          Tempahan Print Online<br><span class="text-cn-blue">Mudah & Tersusun</span>
+        </h1>
+        <p class="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 font-medium leading-relaxed mb-10">
+          Bantu kedai print terima fail PDF, kira harga, ambil bayaran, dan susun pickup tanpa mesej WhatsApp berselerak.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+          <a href="#pricing" class="w-full sm:w-auto px-10 py-4 rounded-full bg-cn-yellow text-cn-deep text-lg font-black shadow-xl shadow-cn-yellow/30 hover:scale-105 transition-all">Daftar Sekarang</a>
+          <a href="#solution" class="w-full sm:w-auto px-10 py-4 rounded-full bg-white text-cn-navy text-lg font-black border-2 border-slate-100 shadow-sm hover:bg-slate-50 transition-all">Lihat Demo</a>
+        </div>
+        <div class="flex flex-wrap justify-center gap-6 text-sm font-bold text-slate-500">
+          <span class="flex items-center gap-2"><span class="text-green-500">${icons.check}</span> Upload PDF</span>
+          <span class="flex items-center gap-2"><span class="text-green-500">${icons.check}</span> Auto Kira Harga</span>
+          <span class="flex items-center gap-2"><span class="text-green-500">${icons.check}</span> Slot Pickup</span>
+        </div>
+      </div>
+      <!-- Abstract shapes -->
+      <div class="absolute top-1/2 left-0 -translate-y-1/2 w-64 h-64 bg-cn-blue/5 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 w-96 h-96 bg-cn-yellow/5 rounded-full blur-3xl"></div>
+    </header>
+
+    <!-- About / What is it -->
+    <section id="about" class="py-24 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <p class="text-cn-blue font-black tracking-widest uppercase text-sm mb-4">Tentang Kami</p>
+          <h2 class="text-3xl md:text-5xl font-black text-cn-deep mb-6 leading-tight">Apa Itu CetakNow?</h2>
+          <p class="text-lg text-slate-600 font-medium leading-relaxed">
+            CetakNow ialah platform digital ringkas untuk kedai print kecil menerima tempahan online secara lebih teratur.
+          </p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="group p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-cn-blue/20 hover:bg-white hover:shadow-2xl hover:shadow-cn-blue/10 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">${icons.upload}</div>
+            <h3 class="text-xl font-black text-cn-deep mb-3">Upload PDF</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Pelanggan terus upload fail PDF dari telefon atau laptop tanpa perlu WhatsApp.</p>
+          </div>
+          <div class="group p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-cn-yellow/20 hover:bg-white hover:shadow-2xl hover:shadow-cn-yellow/10 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-cn-yellow/10 text-cn-deep flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">${icons.calculator}</div>
+            <h3 class="text-xl font-black text-cn-deep mb-3">Auto Kira Harga</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Sistem kira harga automatik berdasarkan saiz, warna, dan jumlah muka surat.</p>
+          </div>
+          <div class="group p-8 rounded-3xl bg-slate-50 border border-slate-100 hover:border-cn-blue/20 hover:bg-white hover:shadow-2xl hover:shadow-cn-blue/10 transition-all duration-300">
+            <div class="w-14 h-14 rounded-2xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">${icons.package}</div>
+            <h3 class="text-xl font-black text-cn-deep mb-3">Pickup Tersusun</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Order tersusun mengikut slot masa pilihan pelanggan. Tiada lagi pelanggan datang serentak.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <footer class="quote-section final-cta footer-cta dark">
-      <div class="footer-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><p>Platform tempahan print online untuk kedai kecil yang mahu order lebih kemas, bayaran jelas, dan pickup lebih tersusun.</p></div>
-      <div class="footer-main"><p class="quote-kicker">Langgan CetakNow</p><h2>Sedia susun order print kedai anda?</h2><p>Bawa pelanggan dari WhatsApp berselerak ke satu sistem order yang lebih mudah dikawal.</p><div class="footer-actions"><a class="quote-button white" href="#pricing">Daftar Sekarang</a><a class="footer-login" href="/login">Log Masuk</a></div></div>
-      <div class="footer-trust"><span>Bayaran online</span><span>Fail dipadam automatik</span><span>Dashboard order</span></div>
-      <nav class="footer-links" aria-label="Footer navigation"><a href="#about">Tentang</a><a href="#problems">Masalah</a><a href="#how">Cara Guna</a><a href="#pricing">Harga</a></nav>
-      <p class="footer-bottom">© 2026 CetakNow. Print Online, Pay Online, Pick Up Easy.</p>
+    <!-- Problems -->
+    <section id="problems" class="py-24 bg-cn-deep text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl md:text-5xl font-black mb-6 leading-tight">Masalah Kedai Print</h2>
+          <p class="text-lg text-slate-400 font-medium">Adakah workflow harian kedai anda masih sesak dan berselerak?</p>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+            <div class="text-4xl font-black text-cn-yellow mb-6 opacity-40 group-hover:opacity-100 transition-opacity">01</div>
+            <h3 class="text-xl font-black mb-3">Order Bercampur Dalam WhatsApp</h3>
+            <p class="text-slate-400 font-medium leading-relaxed">Fail, nota, dan bukti bayaran mudah tenggelam dalam ratusan chat harian.</p>
+          </div>
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+            <div class="text-4xl font-black text-cn-yellow mb-6 opacity-40 group-hover:opacity-100 transition-opacity">02</div>
+            <h3 class="text-xl font-black mb-3">Harga Dikira Manual</h3>
+            <p class="text-slate-400 font-medium leading-relaxed">Staff penat semak satu-satu detail order sebelum boleh bagitahu harga kepada pelanggan.</p>
+          </div>
+          <div class="p-8 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+            <div class="text-4xl font-black text-cn-yellow mb-6 opacity-40 group-hover:opacity-100 transition-opacity">03</div>
+            <h3 class="text-xl font-black mb-3">Pickup Tidak Tersusun</h3>
+            <p class="text-slate-400 font-medium leading-relaxed">Pelanggan datang serentak, staff keliru order mana yang sudah siap atau belum bayar.</p>
+          </div>
+          <div class="p-8 rounded-2xl bg-white/5 border border-cn-yellow/30 bg-cn-yellow/5 hover:bg-cn-yellow/10 transition-all group">
+            <div class="text-4xl font-black text-cn-yellow mb-6 opacity-100">04</div>
+            <h3 class="text-xl font-black mb-3">Customer Tak Datang Pickup</h3>
+            <p class="text-slate-300 font-medium leading-relaxed">Kedai dah print, tapi customer tak muncul. Rugi kertas, ink, dan masa berharga anda.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Solution / Product Preview -->
+    <section id="solution" class="py-24 bg-gradient-to-br from-cn-navy to-cn-blue overflow-hidden text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <p class="text-cn-yellow font-black tracking-widest uppercase text-sm mb-4">Penyelesaian</p>
+            <h2 class="text-3xl md:text-5xl font-black mb-8 leading-tight">Cara CetakNow Membantu Kedai Anda</h2>
+            <ul class="space-y-6">
+              <li class="flex items-start gap-4">
+                <div class="mt-1 w-6 h-6 rounded-full bg-cn-yellow flex-shrink-0 flex items-center justify-center text-cn-deep">${icons.check}</div>
+                <div>
+                  <h4 class="text-xl font-black mb-1">Link Personal Kedai</h4>
+                  <p class="text-slate-300 font-medium">Dapatkan satu link khas untuk pelanggan buat order sendiri tanpa perlu ke kaunter.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="mt-1 w-6 h-6 rounded-full bg-cn-yellow flex-shrink-0 flex items-center justify-center text-cn-deep">${icons.check}</div>
+                <div>
+                  <h4 class="text-xl font-black mb-1">Auto-Calculate Page & Harga</h4>
+                  <p class="text-slate-300 font-medium">Sistem kira harga berdasarkan saiz, warna, copies, dan minimum order secara live.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="mt-1 w-6 h-6 rounded-full bg-cn-yellow flex-shrink-0 flex items-center justify-center text-cn-deep">${icons.check}</div>
+                <div>
+                  <h4 class="text-xl font-black mb-1">Paid Orders Only</h4>
+                  <p class="text-slate-300 font-medium">Hanya print order yang sudah dibayar. Sifar risiko kerugian printing tak dituntut.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="mt-1 w-6 h-6 rounded-full bg-cn-yellow flex-shrink-0 flex items-center justify-center text-cn-deep">${icons.check}</div>
+                <div>
+                  <h4 class="text-xl font-black mb-1">Dashboard Staff Tersusun</h4>
+                  <p class="text-slate-300 font-medium">Semua order, fail PDF, status, dan waktu pickup tersusun kemas dalam satu dashboard.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="relative">
+            <!-- Mockup Phone -->
+            <div class="relative mx-auto w-[320px] h-[640px] bg-cn-deep rounded-[3rem] border-[10px] border-cn-deep shadow-2xl overflow-hidden">
+              <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-8 bg-cn-deep rounded-b-2xl z-20"></div>
+              <div class="absolute inset-0 bg-white p-6 pt-12">
+                <div class="flex items-center justify-between mb-8">
+                  <div class="bg-cn-blue/10 px-3 py-1 rounded-full text-[10px] font-black text-cn-blue uppercase tracking-wider">CetakNow Order</div>
+                  <div class="text-slate-400">${icons.package}</div>
+                </div>
+                <div class="space-y-6">
+                  <div class="text-center border-b border-slate-100 pb-6">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Order ID</p>
+                    <h5 class="text-2xl font-black text-cn-deep">CN-QI-1001</h5>
+                    <div class="inline-block mt-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-black uppercase">Berjaya Dibayar</div>
+                  </div>
+                  <div class="space-y-4">
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-slate-500 font-bold">File</span>
+                      <span class="text-cn-deep font-black">assignment_v2.pdf</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-slate-500 font-bold">Print</span>
+                      <span class="text-cn-deep font-black">24 Pages · Color</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                      <span class="text-slate-500 font-bold">Pickup</span>
+                      <span class="text-cn-deep font-black underline">Hari Ini · 4:00 PM</span>
+                    </div>
+                  </div>
+                  <div class="mt-8 p-5 bg-slate-50 rounded-2xl">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                      <span class="text-slate-500 font-bold">Jumlah Pembayaran</span>
+                    </div>
+                    <div class="text-3xl font-black text-cn-deep">RM8.40</div>
+                  </div>
+                  <button class="w-full py-4 bg-cn-blue text-white rounded-xl font-black text-sm shadow-lg">Sedia Untuk Diambil</button>
+                </div>
+              </div>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cn-yellow/20 rounded-full blur-[100px] -z-10"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Target Audience -->
+    <section class="py-24 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl md:text-5xl font-black text-cn-deep mb-6 leading-tight">Untuk Siapa Platform Ini?</h2>
+          <p class="text-lg text-slate-600 font-medium">Dibina khas untuk operasi kedai print yang sibuk melayan pelanggan.</p>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all text-center">
+            <div class="w-12 h-12 rounded-xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-4 mx-auto">${icons.store}</div>
+            <h4 class="font-black text-cn-deep mb-1">Kedai Print Kecil</h4>
+            <p class="text-xs text-slate-500 font-semibold">Urus order lebih profesional.</p>
+          </div>
+          <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all text-center">
+            <div class="w-12 h-12 rounded-xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-4 mx-auto">${icons.grad}</div>
+            <h4 class="font-black text-cn-deep mb-1">Kawasan Kampus</h4>
+            <p class="text-xs text-slate-500 font-semibold">Sesuai untuk volume tinggi.</p>
+          </div>
+          <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all text-center">
+            <div class="w-12 h-12 rounded-xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-4 mx-auto">${icons.file}</div>
+            <h4 class="font-black text-cn-deep mb-1">Photostat Shop</h4>
+            <p class="text-xs text-slate-500 font-semibold">Mudahkan servis printing.</p>
+          </div>
+          <div class="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all text-center">
+            <div class="w-12 h-12 rounded-xl bg-cn-blue/10 text-cn-blue flex items-center justify-center mb-4 mx-auto">${icons.user}</div>
+            <h4 class="font-black text-cn-deep mb-1">Owner Urus Sendiri</h4>
+            <p class="text-xs text-slate-500 font-semibold">Jimat masa dan tenaga anda.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="py-24 bg-slate-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl md:text-5xl font-black text-cn-deep mb-6 leading-tight">Macam Mana Ia Berfungsi?</h2>
+          <p class="text-lg text-slate-600 font-medium">3 langkah mudah untuk digitalkan kedai print anda.</p>
+        </div>
+        <div class="grid lg:grid-cols-3 gap-12 relative">
+          <!-- Connector line -->
+          <div class="hidden lg:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-slate-200 -z-0"></div>
+          
+          <div class="relative z-10 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-cn-navy text-white flex items-center justify-center text-2xl font-black mx-auto mb-8 shadow-xl">1</div>
+            <h3 class="text-xl font-black text-cn-deep mb-4">Langgan & Bayar</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Pilih pelan bulanan atau tahunan yang sesuai, kemudian aktifkan akaun kedai anda secara online.</p>
+          </div>
+          <div class="relative z-10 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-cn-navy text-white flex items-center justify-center text-2xl font-black mx-auto mb-8 shadow-xl">2</div>
+            <h3 class="text-xl font-black text-cn-deep mb-4">Setup Page Kedai</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Masukkan nama kedai, harga print, minimum order, waktu operasi, dan slot pickup kedai anda.</p>
+          </div>
+          <div class="relative z-10 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-cn-navy text-white flex items-center justify-center text-2xl font-black mx-auto mb-8 shadow-xl">3</div>
+            <h3 class="text-xl font-black text-cn-deep mb-4">Dapat Link Kedai</h3>
+            <p class="text-slate-600 font-medium leading-relaxed">Kongsi link CetakNow kedai anda di WhatsApp, bio media sosial, atau poster di depan kedai.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy / Security -->
+    <section class="py-24 bg-white">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-cn-ice rounded-[2rem] p-10 md:p-16 border-2 border-cn-blue/5 flex flex-col md:flex-row items-center gap-10 text-center md:text-left">
+          <div class="w-24 h-24 rounded-3xl bg-cn-blue text-white flex flex-shrink-0 items-center justify-center shadow-xl shadow-cn-blue/20 animate-pulse">
+            <div class="scale-[2]">${icons.lock}</div>
+          </div>
+          <div>
+            <h2 class="text-2xl md:text-4xl font-black text-cn-deep mb-4">Privasi & Keselamatan Fail</h2>
+            <p class="text-lg text-slate-600 font-medium leading-relaxed mb-6">
+              Kami faham privasi pelanggan adalah utama. Fail PDF tidak dipaparkan secara umum dan hanya boleh diakses oleh staff melalui dashboard.
+            </p>
+            <div class="flex flex-wrap justify-center md:justify-start gap-3">
+              <span class="px-4 py-2 rounded-lg bg-white text-cn-blue text-sm font-black border border-cn-blue/10">Fail Dilindungi</span>
+              <span class="px-4 py-2 rounded-lg bg-white text-cn-blue text-sm font-black border border-cn-blue/10">Upload Peribadi</span>
+              <span class="px-4 py-2 rounded-lg bg-white text-cn-blue text-sm font-black border border-cn-blue/10">Padam Selepas 7 Hari</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="py-24 bg-slate-50 border-y border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <p class="text-cn-blue font-black tracking-widest uppercase text-sm mb-4">Harga</p>
+          <h2 class="text-3xl md:text-5xl font-black text-cn-deep mb-6 leading-tight">Harga Telus & Mudah</h2>
+          <p class="text-lg text-slate-600 font-medium">Tiada yuran setup. Hanya pilih pelan yang sesuai untuk fasa validasi kedai anda.</p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <!-- Monthly -->
+          <article class="relative p-10 rounded-[2.5rem] bg-white border border-slate-200 shadow-sm hover:shadow-2xl transition-all duration-500">
+            <div class="mb-8">
+              <h3 class="text-2xl font-black text-cn-deep mb-2">Plan Bulanan</h3>
+              <p class="text-slate-500 font-bold">Sesuai untuk mula kecil</p>
+            </div>
+            <div class="mb-10">
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black text-cn-deep">RM49</span>
+                <span class="text-slate-500 font-bold">/bulan</span>
+              </div>
+            </div>
+            <ul class="space-y-4 mb-12">
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Link kedai sendiri
+              </li>
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Dashboard order
+              </li>
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Bayaran online
+              </li>
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Custom harga print
+              </li>
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Pickup slot
+              </li>
+              <li class="flex items-center gap-3 font-bold text-slate-600 leading-tight">
+                <span class="text-cn-blue">${icons.check}</span> Fail dipadam automatik
+              </li>
+            </ul>
+            <a href="#subscription-checkout" 
+               class="plan-trigger block w-full py-5 rounded-2xl border-2 border-cn-blue text-cn-blue text-center font-black text-lg hover:bg-cn-blue hover:text-white transition-all"
+               data-plan="monthly" data-plan-label="Pelan Bulanan" data-amount="49">
+              Langgan Bulanan
+            </a>
+          </article>
+
+          <!-- Yearly -->
+          <article class="relative p-10 rounded-[2.5rem] bg-cn-navy text-white shadow-2xl shadow-cn-navy/30 hover:scale-[1.02] transition-all duration-500 overflow-hidden">
+            <div class="absolute top-8 right-8 px-4 py-1 rounded-full bg-cn-yellow text-cn-deep text-[10px] font-black uppercase tracking-widest">Paling Popular</div>
+            <!-- Glow effect -->
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-cn-blue/20 rounded-full blur-3xl"></div>
+            
+            <div class="mb-8 relative z-10">
+              <h3 class="text-2xl font-black mb-2">Plan Tahunan</h3>
+              <p class="text-white/60 font-bold">Jimat untuk kedai aktif</p>
+            </div>
+            <div class="mb-10 relative z-10">
+              <div class="flex items-baseline gap-1">
+                <span class="text-5xl font-black text-white">RM499</span>
+                <span class="text-white/60 font-bold">/tahun</span>
+              </div>
+              <p class="text-cn-yellow text-xs font-black mt-2">Jimat RM89 berbanding bulanan!</p>
+            </div>
+            <ul class="space-y-4 mb-12 relative z-10">
+              <li class="flex items-center gap-3 font-bold text-white/90 leading-tight">
+                <span class="text-cn-yellow">${icons.check}</span> Semua fungsi pelan bulanan
+              </li>
+              <li class="flex items-center gap-3 font-bold text-white/90 leading-tight">
+                <span class="text-cn-yellow">${icons.check}</span> Nilai lebih jimat
+              </li>
+              <li class="flex items-center gap-3 font-bold text-white/90 leading-tight">
+                <span class="text-cn-yellow">${icons.check}</span> Sokongan manual diutamakan
+              </li>
+              <li class="flex items-center gap-3 font-bold text-white/90 leading-tight">
+                <span class="text-cn-yellow">${icons.check}</span> Fail dipadam automatik
+              </li>
+            </ul>
+            <a href="#subscription-checkout" 
+               class="plan-trigger block w-full py-5 rounded-2xl bg-cn-yellow text-cn-deep text-center font-black text-lg shadow-xl shadow-cn-yellow/20 hover:scale-105 transition-all relative z-10"
+               data-plan="annual" data-plan-label="Pelan Tahunan" data-amount="499">
+              Pilih Tahunan
+            </a>
+          </article>
+        </div>
+        <p class="text-center mt-12 text-slate-500 font-bold text-sm">Harga langganan tetap. Tiada yuran tersembunyi.</p>
+      </div>
+    </section>
+
+    <!-- Footer CTA -->
+    <footer class="py-24 bg-cn-deep text-white text-center px-4 overflow-hidden relative">
+      <div class="max-w-4xl mx-auto relative z-10">
+        <p class="text-cn-yellow font-black tracking-widest uppercase text-xs mb-6">Mula Sekarang</p>
+        <h2 class="text-4xl md:text-6xl font-black mb-8 leading-[1.1] text-balance">Sedia susun order print kedai anda?</h2>
+        <p class="text-xl text-slate-400 font-medium mb-12 max-w-2xl mx-auto">
+          Bawa pelanggan dari WhatsApp berselerak ke satu sistem order yang lebih mudah dikawal.
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="#pricing" class="w-full sm:w-auto px-12 py-5 rounded-full bg-cn-yellow text-cn-deep text-xl font-black shadow-2xl shadow-cn-yellow/20 hover:scale-105 transition-all">Daftar Sekarang</a>
+          <a href="#solution" class="w-full sm:w-auto px-12 py-5 rounded-full bg-white/10 text-white text-xl font-black border border-white/20 hover:bg-white/20 transition-all">Lihat Demo</a>
+        </div>
+      </div>
+      <!-- Background logo -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] scale-[4] pointer-events-none -z-0">
+        <img src="/public/assets/icon.png" alt="">
+      </div>
+      <div class="mt-24 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8 max-w-7xl mx-auto text-left relative z-10">
+        <div class="flex flex-col items-center md:items-start">
+          <img src="/public/assets/primary-logo.png" alt="CetakNow" class="h-10 mb-6 brightness-0 invert opacity-80">
+          <p class="text-slate-500 text-sm font-bold">© 2026 CetakNow. Print Online, Pay Online, Pick Up Easy.</p>
+        </div>
+        <div class="flex gap-8 text-sm font-black text-slate-400">
+          <a href="#about" class="hover:text-white transition-colors">Tentang</a>
+          <a href="#problems" class="hover:text-white transition-colors">Masalah</a>
+          <a href="#how" class="hover:text-white transition-colors">Cara Guna</a>
+          <a href="#pricing" class="hover:text-white transition-colors">Harga</a>
+        </div>
+      </div>
     </footer>
+
+    <!-- Subscription Checkout Modal -->
+    <section id="subscription-checkout" class="subscription-modal group fixed inset-0 z-[100] overflow-y-auto transition-all duration-300 opacity-0 pointer-events-none" aria-hidden="true">
+      <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity">
+        <a class="absolute inset-0" href="#pricing" aria-label="Tutup checkout"></a>
+      </div>
+      
+      <div class="relative min-h-screen flex justify-center p-4">
+        <form class="subscription-dialog relative my-auto bg-white w-full max-w-[520px] rounded-[2.5rem] shadow-2xl shadow-cn-navy/20 flex flex-col transition-transform scale-95 duration-300" 
+              method="post" action="/subscriptions">
+          
+          <!-- Header -->
+          <div class="relative pt-10 pb-6 px-6 sm:px-10 md:px-12 bg-white rounded-t-[2.5rem]">
+            <a href="#pricing" class="absolute top-6 right-6 sm:right-10 md:right-12 p-2 text-slate-400 hover:text-cn-deep hover:bg-slate-50 rounded-full transition-all" aria-label="Tutup">
+              ${icons.x}
+            </a>
+            
+            <div class="inline-block px-3 py-1 rounded-full bg-cn-yellow text-cn-deep text-[10px] font-black uppercase tracking-widest mb-4 modal-plan-badge">
+              Pelan Bulanan
+            </div>
+            <h2 class="text-2xl font-black text-cn-deep tracking-tight mb-1">Langgan CetakNow</h2>
+            <p class="text-slate-500 font-bold text-xs">Isi maklumat anda untuk teruskan langganan.</p>
+          </div>
+
+          <!-- Body -->
+          <div class="px-6 sm:px-10 md:px-12 pb-10 space-y-6">
+            <input type="hidden" name="plan" value="monthly">
+            
+            <!-- Selected Plan Summary Card -->
+            <div class="p-5 rounded-2xl bg-cn-ice border border-cn-blue/10">
+              <div class="flex justify-between items-center mb-3">
+                <span class="text-[10px] font-black text-cn-blue uppercase tracking-widest">Plan Terpilih</span>
+                <span class="text-cn-deep font-black text-xs modal-plan-price-label">RM49/bulan</span>
+              </div>
+              <ul class="grid grid-cols-2 gap-x-4 gap-y-2">
+                <li class="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                  <span class="text-cn-blue scale-75">${icons.check}</span> Kedai Sendiri
+                </li>
+                <li class="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                  <span class="text-cn-blue scale-75">${icons.check}</span> Order Dashboard
+                </li>
+                <li class="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                  <span class="text-cn-blue scale-75">${icons.check}</span> Bayaran Online
+                </li>
+                <li class="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                  <span class="text-cn-blue scale-75">${icons.check}</span> Custom Harga
+                </li>
+              </ul>
+            </div>
+
+            <!-- Fields -->
+            <div class="space-y-4">
+              <div class="space-y-1.5">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Email</label>
+                <div class="relative group">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cn-blue transition-colors">
+                    ${icons.mail}
+                  </span>
+                  <input required type="email" name="email" placeholder="nama@email.com" autocomplete="email"
+                         class="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold text-base transition-all">
+                </div>
+              </div>
+              
+              <div class="space-y-1.5">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Nombor Telefon</label>
+                <div class="relative group">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cn-blue transition-colors">
+                    ${icons.phone}
+                  </span>
+                  <input required name="phone" inputmode="tel" autocomplete="tel" pattern="[0-9+ ]{9,16}" placeholder="0123456789"
+                         class="w-full h-12 pl-11 pr-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold text-base transition-all">
+                </div>
+                <p class="text-[9px] text-slate-400 font-bold italic pl-1 leading-tight">Kami akan gunakan nombor ini untuk hubungi anda berkaitan akaun.</p>
+              </div>
+            </div>
+
+            <!-- Price Box -->
+            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center text-center">
+              <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Jumlah Bayaran</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-black text-cn-deep">RM<span class="modal-plan-amount">49</span></span>
+              </div>
+              <p class="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 modal-billing-interval">Billed Monthly</p>
+            </div>
+
+            <!-- CTA & Trust -->
+            <div class="space-y-4">
+              <div class="text-center">
+                <p class="text-[10px] text-slate-500 font-bold mb-3 flex items-center justify-center gap-1.5">
+                  <span class="text-green-500 scale-75">${icons.shield}</span> Pembayaran selamat. Akaun aktif segera.
+                </p>
+                <button type="submit" 
+                        class="w-full py-4 rounded-xl bg-cn-navy text-white font-black text-lg shadow-lg shadow-cn-navy/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+                  <span>Teruskan Pembayaran</span>
+                  ${icons.arrow}
+                </button>
+              </div>
+              
+              <div class="flex items-center justify-center gap-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                <span class="flex items-center gap-1">${icons.check} No Setup Fee</span>
+                <span class="flex items-center gap-1">${icons.check} Cancel Anytime</span>
+              </div>
+
+              <div class="text-center pt-1">
+                <a href="#pricing" class="inline-block text-slate-400 hover:text-cn-navy font-black text-xs transition-colors py-1">Batal</a>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
 
     <script>
       const subscriptionModal = document.querySelector('#subscription-checkout');
-      const subscriptionForm = document.querySelector('.subscription-dialog');
-      const planInput = subscriptionForm?.querySelector('input[name="plan"]');
-      const planLabel = document.querySelector('.modal-plan-label');
+      const subscriptionDialog = document.querySelector('.subscription-dialog');
+      const planInput = subscriptionDialog?.querySelector('input[name="plan"]');
+      const planBadge = document.querySelector('.modal-plan-badge');
+      const planPriceLabel = document.querySelector('.modal-plan-price-label');
       const planAmount = document.querySelector('.modal-plan-amount');
-      const paymentButton = subscriptionForm?.querySelector('button');
+      const billingInterval = document.querySelector('.modal-billing-interval');
+      const paymentButton = subscriptionDialog?.querySelector('button[type="submit"]');
+      
       function syncSubscriptionModal() {
         const isOpen = location.hash === '#subscription-checkout';
-        subscriptionModal?.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        if (!subscriptionModal || !subscriptionDialog) return;
+
+        subscriptionModal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        
+        if (isOpen) {
+          subscriptionModal.classList.remove('opacity-0', 'pointer-events-none');
+          subscriptionModal.classList.add('opacity-100', 'pointer-events-auto');
+          subscriptionDialog.classList.remove('scale-95');
+          subscriptionDialog.classList.add('scale-100');
+          document.body.style.overflow = 'hidden';
+        } else {
+          subscriptionModal.classList.remove('opacity-100', 'pointer-events-auto');
+          subscriptionModal.classList.add('opacity-0', 'pointer-events-none');
+          subscriptionDialog.classList.remove('scale-100');
+          subscriptionDialog.classList.add('scale-95');
+          document.body.style.overflow = 'auto';
+        }
       }
+
       document.querySelectorAll('.plan-trigger').forEach((trigger) => {
         trigger.addEventListener('click', () => {
-          if (planInput) planInput.value = trigger.dataset.plan || 'monthly';
-          if (planLabel) planLabel.textContent = trigger.dataset.planLabel || 'Pelan Bulanan';
-          if (planAmount) planAmount.textContent = trigger.dataset.amount || '49';
+          const plan = trigger.dataset.plan || 'monthly';
+          const label = trigger.dataset.planLabel || 'Pelan Bulanan';
+          const amount = trigger.dataset.amount || '49';
+          
+          if (planInput) planInput.value = plan;
+          if (planBadge) planBadge.textContent = label;
+          if (planAmount) planAmount.textContent = amount;
+          
+          if (planPriceLabel) {
+            planPriceLabel.textContent = \`RM\${amount}/\${plan === 'annual' ? 'tahun' : 'bulan'}\`;
+          }
+          
+          if (billingInterval) {
+            billingInterval.textContent = \`Billed \${plan === 'annual' ? 'Yearly' : 'Monthly'}\`;
+          }
+          
           setTimeout(syncSubscriptionModal, 0);
         });
       });
+
       window.addEventListener('hashchange', syncSubscriptionModal);
       syncSubscriptionModal();
-      subscriptionForm?.addEventListener('submit', () => {
-        if (!subscriptionForm.checkValidity()) return;
-        paymentButton.disabled = true;
-        paymentButton.textContent = 'Menghantar...';
-      });
-    </script>
 
+      subscriptionDialog?.addEventListener('submit', (e) => {
+        if (!subscriptionDialog.checkValidity()) return;
+        paymentButton.disabled = true;
+        paymentButton.innerHTML = '<span>Memproses...</span>';
+        paymentButton.classList.add('opacity-70', 'cursor-not-allowed');
+      });
+
+      // Mobile menu toggle
+      const mobileMenu = document.getElementById('mobile-menu');
+      const menuBtn = document.getElementById('mobile-menu-btn');
+      const menuClose = document.getElementById('mobile-menu-close');
+      const menuBackdrop = document.getElementById('mobile-menu-backdrop');
+      const menuIconOpen = document.getElementById('menu-icon-open');
+      const menuIconClose = document.getElementById('menu-icon-close');
+
+      function openMenu() {
+        mobileMenu.classList.remove('hidden');
+        mobileMenu.setAttribute('aria-hidden', 'false');
+        menuIconOpen.classList.add('hidden');
+        menuIconClose.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeMenu() {
+        mobileMenu.classList.add('hidden');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        menuIconOpen.classList.remove('hidden');
+        menuIconClose.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      menuBtn?.addEventListener('click', () => {
+        if (mobileMenu.classList.contains('hidden')) openMenu();
+        else closeMenu();
+      });
+      menuClose?.addEventListener('click', closeMenu);
+      menuBackdrop?.addEventListener('click', closeMenu);
+      mobileMenu?.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', closeMenu);
+      });
+
+      // Close mobile menu on resize to desktop
+      window.addEventListener('resize', function () {
+        if (window.innerWidth >= 768) {
+          if (mobileMenu && !mobileMenu.classList.contains('hidden')) closeMenu();
+        }
+      });
+
+      // Simple animation styles
+      if (!document.getElementById('cn-animations')) {
+        const style = document.createElement('style');
+        style.id = 'cn-animations';
+        style.textContent = \`
+          @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+          }
+          html { scroll-behavior: smooth; }
+          #mobile-menu > div:last-child {
+            animation: slideIn 0.25s ease-out;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+        \`;
+        document.head.appendChild(style);
+      }
+    </script>
   </main>`);
 }
 
 export function subscribeThanksPage() {
-  return layout('Terima Kasih - CetakNow', `<main class="page narrow"><section class="card success"><p class="eyebrow">Minat diterima</p><h1>Terima kasih, kami akan hubungi anda untuk setup CetakNow.</h1><p>Team CetakNow akan semak maklumat kedai dan hubungi anda untuk setup manual bagi fasa MVP.</p><a class="button" href="/">Kembali ke landing page</a></section></main>`);
+  return layout('Terima Kasih - CetakNow', `
+  <main class="min-h-screen bg-slate-50 py-24 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100 text-center">
+        <div class="bg-green-500 p-12 text-white">
+          <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <p class="text-sm font-black uppercase tracking-[0.2em] mb-2 opacity-80">Minat Diterima</p>
+          <h1 class="text-3xl md:text-4xl font-black leading-tight">Terima kasih, kami akan hubungi anda.</h1>
+        </div>
+        <div class="p-8 md:p-12 space-y-6">
+          <p class="text-lg text-slate-600 font-medium leading-relaxed">
+            Team CetakNow akan semak maklumat anda dan hubungi untuk fasa setup manual.
+          </p>
+          <a href="/" class="inline-block px-10 py-4 rounded-full bg-cn-navy text-white font-black text-lg shadow-xl shadow-cn-navy/20 hover:scale-105 transition-all">Kembali ke landing page</a>
+        </div>
+      </div>
+    </div>
+  </main>`);
 }
 
 export function shopPage({ shop, pricing, slots, products = [], paperSizes = [], error = '' }) {
@@ -240,14 +877,344 @@ export function confirmationPage(order, shop, slot) {
 }
 
 export function loginPage(error = '') {
-  return layout('CetakNow Login', `<main class="login-page"><section class="login-shell"><div class="login-brand-panel"><a class="login-logo" href="/" aria-label="CetakNow home"><img src="/public/assets/primary-logo.png" alt="CetakNow"></a><p class="quote-kicker">Admin access</p><h1>Log Masuk Admin</h1><p>Urus order, bayaran, fail PDF, dan pickup slot kedai dari satu dashboard yang tersusun.</p><div class="login-trust"><span>Bayaran dahulu</span><span>Dashboard order</span><span>Link kedai sendiri</span></div></div><form class="login-card" method="post" action="/login"><div class="login-form-head"><p class="quote-kicker">CetakNow Dashboard</p><h2>Akses dashboard kedai</h2></div>${error ? `<div class="alert">${escapeHtml(error)}</div>` : ''}<label>Email <input name="email" type="email" autocomplete="email" required></label><label>Password <input name="password" type="password" autocomplete="current-password" required></label><button>Log Masuk</button><div class="login-subscribe"><p>Belum ada akaun kedai?</p><a href="/#pricing">Belum ada akaun? Langgan</a></div><p class="muted login-demo">Demo: owner@cetaknow.local / password · admin@qalamirma.local / password</p></form></section></main>`);
+  return layout('CetakNow Login', `
+  <main class="min-h-screen grid grid-cols-1 lg:grid-cols-12 relative bg-gradient-to-br from-cn-ice via-white to-cn-yellow-soft/10 overflow-x-hidden">
+    <!-- Faint grid pattern background -->
+    <div class="absolute inset-0 opacity-40 pointer-events-none" style="background-image: radial-gradient(rgba(11,79,159,0.06) 1.5px, transparent 1.5px); background-size: 24px 24px;"></div>
+    
+    <!-- Soft background glows -->
+    <div class="absolute top-1/4 left-1/4 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] rounded-full bg-cn-yellow/5 blur-[80px] sm:blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[300px] sm:w-[400px] h-[300px] sm:h-[400px] rounded-full bg-cn-blue/5 blur-[80px] sm:blur-[120px] pointer-events-none"></div>
+
+    <!-- Left Column: Login Form -->
+    <div class="col-span-1 lg:col-span-5 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12 bg-white/90 backdrop-blur-xl relative z-10 border-b lg:border-b-0 lg:border-r border-slate-100 shadow-xl">
+      <div class="w-full max-w-md mx-auto">
+        <!-- Logo -->
+        <div class="mb-8 flex justify-center lg:justify-start">
+          <a href="/" class="inline-block transition-transform hover:scale-[1.02]">
+            <img src="/public/assets/primary-logo.png" alt="CetakNow" class="h-10 drop-shadow-sm">
+          </a>
+        </div>
+
+        <!-- Role Badge -->
+        <div class="flex justify-center lg:justify-start">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cn-ice text-cn-blue mb-4 border border-cn-blue/10">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            Pemilik Kedai
+          </span>
+        </div>
+
+        <!-- Welcome Headings -->
+        <div class="space-y-2 mb-8 text-center lg:text-left">
+          <h1 class="text-3xl font-extrabold text-cn-navy tracking-tight">Selamat Kembali</h1>
+          <p class="text-base font-bold text-cn-deep">Log masuk ke dashboard kedai anda</p>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed max-w-sm mx-auto lg:mx-0">
+            Urus order print, fail customer, bayaran, dan pickup slot dalam satu tempat.
+          </p>
+        </div>
+        
+        <!-- Form Card -->
+        <form class="bg-white border border-slate-100 rounded-3xl p-6 sm:p-8 shadow-xl shadow-cn-navy/5 space-y-5" method="post" action="/login" novalidate>
+          ${error ? `<div class="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold flex items-center gap-2.5">
+            <svg class="flex-shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <span class="leading-tight">${escapeHtml(error)}</span>
+          </div>` : ''}
+          
+          <!-- Email Input -->
+          <div class="space-y-1.5 relative">
+            <label for="email" class="block text-[10px] font-extrabold text-cn-navy uppercase tracking-widest">Email Kedai</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
+                </svg>
+              </div>
+              <input id="email" name="email" type="email" autocomplete="email" required placeholder="owner@kedai.com"
+                     class="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50 border border-slate-200 focus:border-cn-navy focus:ring-2 focus:ring-cn-yellow/40 outline-none font-medium text-cn-deep text-sm transition-all">
+            </div>
+            <p id="email-error" class="hidden text-[11px] text-red-600 font-semibold mt-1 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Sila masukkan email yang sah
+            </p>
+          </div>
+          
+          <!-- Password Input -->
+          <div class="space-y-1.5 relative">
+            <div class="flex justify-between items-center">
+              <label for="password" class="block text-[10px] font-extrabold text-cn-navy uppercase tracking-widest">Password</label>
+              <a href="/forgot-password" class="text-[11px] font-bold text-cn-blue hover:text-cn-navy hover:underline transition-colors">Lupa password?</a>
+            </div>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Masukkan password"
+                     class="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-50 border border-slate-200 focus:border-cn-navy focus:ring-2 focus:ring-cn-yellow/40 outline-none font-medium text-cn-deep text-sm transition-all">
+              
+              <button id="toggle-password" type="button" class="absolute inset-y-0 right-0 w-10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                <!-- Eye Icon -->
+                <svg id="eye-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <!-- Eye Off Icon -->
+                <svg id="eye-off-icon" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              </button>
+            </div>
+            <p id="password-error" class="hidden text-[11px] text-red-600 font-semibold mt-1 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Sila masukkan password anda
+            </p>
+          </div>
+          
+          <!-- Submit Button -->
+          <div class="pt-2">
+            <button type="submit" class="w-full h-11 bg-cn-navy hover:bg-cn-navy/95 active:scale-[0.99] text-white rounded-xl font-bold text-sm shadow-md shadow-cn-navy/15 hover:shadow-lg transition-all flex items-center justify-center gap-2">
+              Log Masuk
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Secure/Trust Microcopy -->
+          <div class="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-bold">
+            <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span>Akses selamat ke dashboard kedai anda.</span>
+          </div>
+          
+          <!-- Register CTA -->
+          <div class="pt-5 border-t border-slate-100 text-center space-y-3">
+            <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Belum ada akaun kedai?</p>
+            <a href="/#pricing" class="inline-flex w-full h-11 items-center justify-center rounded-xl border border-cn-yellow bg-cn-yellow/10 hover:bg-cn-yellow/20 text-cn-navy font-bold text-sm transition-all hover:scale-[1.01]">
+              Daftar Kedai Anda
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Right Column: Benefits & Preview Panel -->
+    <div class="col-span-1 lg:col-span-7 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-16 xl:p-24 relative overflow-hidden bg-slate-50/50 lg:bg-transparent">
+      <div class="w-full max-w-lg space-y-10 relative z-10">
+        <!-- Benefit Copy -->
+        <div class="space-y-5">
+          <h2 class="text-3xl font-extrabold text-cn-navy leading-tight">Urus order print dalam satu dashboard</h2>
+          <ul class="space-y-4">
+            <li class="flex items-center gap-3 text-cn-deep font-bold text-sm">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+              Lihat order berbayar
+            </li>
+            <li class="flex items-center gap-3 text-cn-deep font-bold text-sm">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+              Download fail PDF customer
+            </li>
+            <li class="flex items-center gap-3 text-cn-deep font-bold text-sm">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+              Susun pickup slot
+            </li>
+            <li class="flex items-center gap-3 text-cn-deep font-bold text-sm">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+              Update status order
+            </li>
+          </ul>
+        </div>
+
+        <!-- Mini Dashboard Preview Card -->
+        <div class="relative bg-white border border-slate-100 rounded-2xl p-5 shadow-xl shadow-cn-navy/5 w-full mx-auto lg:mx-0 transition-all hover:shadow-2xl hover:scale-[1.01] duration-300">
+          <!-- Abstract mini-header -->
+          <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+            <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Order Terkini</span>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 flex items-center gap-1 border border-emerald-100">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Paid
+            </span>
+          </div>
+          
+          <!-- Order details -->
+          <div class="space-y-3">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-bold">Order ID</span>
+              <span class="text-cn-navy font-bold">CN-QI-1001</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400 font-bold">Pickup Time</span>
+              <span class="text-cn-deep font-bold">4:00 PM</span>
+            </div>
+            <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-50">
+              <span class="text-slate-400 font-bold">Total</span>
+              <span class="text-cn-navy font-extrabold text-sm">RM8.40</span>
+            </div>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="mt-4 flex gap-2">
+            <span class="w-full h-8 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center gap-1 transition-colors border border-slate-100 cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              PDF
+            </span>
+            <span class="w-full h-8 rounded-lg bg-cn-navy text-white text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer hover:bg-cn-navy/90">
+              Selesai
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Inline validation logic
+    const form = document.querySelector('form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const emailError = document.getElementById('email-error');
+    const passwordError = document.getElementById('password-error');
+
+    form.addEventListener('submit', function(e) {
+      let hasError = false;
+
+      // Validate email
+      const emailValue = emailInput.value.trim();
+      if (!emailValue) {
+        emailError.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> Sila masukkan email kedai anda';
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('border-red-500', 'focus:ring-red-100');
+        emailInput.classList.remove('border-slate-200', 'focus:ring-cn-yellow/40');
+        hasError = true;
+      } else if (!validateEmail(emailValue)) {
+        emailError.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> Sila masukkan email yang sah (contoh: owner@kedai.com)';
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('border-red-500', 'focus:ring-red-100');
+        emailInput.classList.remove('border-slate-200', 'focus:ring-cn-yellow/40');
+        hasError = true;
+      } else {
+        emailError.classList.add('hidden');
+        emailInput.classList.remove('border-red-500', 'focus:ring-red-100');
+        emailInput.classList.add('border-slate-200', 'focus:ring-cn-yellow/40');
+      }
+
+      // Validate password
+      const passwordValue = passwordInput.value;
+      if (!passwordValue) {
+        passwordError.classList.remove('hidden');
+        passwordInput.classList.add('border-red-500', 'focus:ring-red-100');
+        passwordInput.classList.remove('border-slate-200', 'focus:ring-cn-yellow/40');
+        hasError = true;
+      } else {
+        passwordError.classList.add('hidden');
+        passwordInput.classList.remove('border-red-500', 'focus:ring-red-100');
+        passwordInput.classList.add('border-slate-200', 'focus:ring-cn-yellow/40');
+      }
+
+      if (hasError) {
+        e.preventDefault();
+      }
+    });
+
+    // Input listeners to clear errors on typing
+    emailInput.addEventListener('input', function() {
+      emailError.classList.add('hidden');
+      emailInput.classList.remove('border-red-500', 'focus:ring-red-100');
+      emailInput.classList.add('border-slate-200', 'focus:ring-cn-yellow/40');
+    });
+
+    passwordInput.addEventListener('input', function() {
+      passwordError.classList.add('hidden');
+      passwordInput.classList.remove('border-red-500', 'focus:ring-red-100');
+      passwordInput.classList.add('border-slate-200', 'focus:ring-cn-yellow/40');
+    });
+
+    function validateEmail(email) {
+      const re = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+      return re.test(email);
+    }
+
+    // Password visibility toggle
+    const toggleBtn = document.getElementById('toggle-password');
+    const eyeIcon = document.getElementById('eye-icon');
+    const eyeOffIcon = document.getElementById('eye-off-icon');
+
+    toggleBtn.addEventListener('click', function() {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.classList.add('hidden');
+        eyeOffIcon.classList.remove('hidden');
+      } else {
+        passwordInput.type = 'password';
+        eyeIcon.classList.remove('hidden');
+        eyeOffIcon.classList.add('hidden');
+      }
+    });
+  </script>
+  `);
 }
 
 function statusClass(value = '') {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'default';
 }
 
-function adminShell({ title, subtitle, userLabel, active = 'overview', body, role = 'Shop Dashboard', shopSlug = '' }) {
+function badgeLabel(role = '') {
+  return role === 'Super Admin' ? 'Super Admin' : 'SHOP DASHBOARD';
+}
+
+function copyUrlButton(link, label = 'Copy Link') {
+  return `<button type="button" class="table-action ghost copy-link" data-copy-link="${escapeHtml(link)}">${escapeHtml(label)}</button>`;
+}
+
+function shopLinkAction(link, label = 'Buka Link Kedai') {
+  return `<a class="admin-action secondary" href="${escapeHtml(link)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+}
+
+function shopCopyAction(link, label = 'Salin Link') {
+  return `<button type="button" class="admin-action ghost copy-link" data-copy-link="${escapeHtml(link)}">${escapeHtml(label)}</button>`;
+}
+
+function adminRowActions({ id, slug, active }) {
+  const deactivateLabel = active ? 'Deactivate' : 'Activate';
+  return `<details class="row-actions">
+    <summary aria-label="Open tenant actions">Actions</summary>
+    <div class="row-actions-menu">
+      <a href="/admin/shops/${escapeHtml(id)}">View</a>
+      <a href="/admin/shops/${escapeHtml(id)}#edit">Edit</a>
+      <a href="/shop/${escapeHtml(slug)}" target="_blank" rel="noreferrer">Open Page</a>
+      <form method="post" action="/admin/shops/${escapeHtml(id)}/status">
+        <button type="submit">${deactivateLabel}</button>
+      </form>
+    </div>
+  </details>`;
+}
+
+function adminShell({ title, subtitle, userLabel, active = 'overview', body, role = 'Shop Dashboard', shopSlug = '', headerActions = '' }) {
   const shopLink = shopSlug ? `/shop/${escapeHtml(shopSlug)}` : '/';
   const subscriptionLink = role === 'Super Admin' ? shopLink : '/admin/subscription';
   const shopsHref = role === 'Super Admin' ? '/admin/shops' : '/admin/orders';
@@ -255,18 +1222,18 @@ function adminShell({ title, subtitle, userLabel, active = 'overview', body, rol
   const shopSettingsItem = role === 'Super Admin' ? '' : item('settings', '/admin/settings', 'settings', 'Tetapan', 'Kedai & harga');
   return `<main class="admin-layout">
     <aside class="admin-sidebar">
-      <div class="admin-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><span>${escapeHtml(role)}</span></div>
+      <div class="admin-brand"><img src="/public/assets/primary-logo.png" alt="CetakNow"><span>${escapeHtml(badgeLabel(role))}</span></div>
       <nav class="admin-side-nav" aria-label="Admin navigation">
-        ${item('overview', '/admin', 'home', 'Ringkasan', 'Dashboard')}
-        ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Kedai' : 'Order', role === 'Super Admin' ? 'Urus tenant' : 'Senarai kerja')}
-        ${item('revenue', '/admin/revenue', 'revenue', 'Hasil', 'Revenue')}
-        ${item(role === 'Super Admin' ? 'shop' : 'subscription', subscriptionLink, 'external', role === 'Super Admin' ? 'Landing' : 'Langganan', role === 'Super Admin' ? 'Buka page' : 'Plan & link')}
+        ${item('overview', '/admin', 'home', role === 'Super Admin' ? 'Overview' : 'Ringkasan', role === 'Super Admin' ? 'Platform' : 'Dashboard')}
+        ${item('orders', shopsHref, 'orders', role === 'Super Admin' ? 'Shops' : 'Order', role === 'Super Admin' ? 'Tenants' : 'Senarai kerja')}
+        ${item('revenue', '/admin/revenue', 'revenue', role === 'Super Admin' ? 'Revenue' : 'Hasil', role === 'Super Admin' ? 'Platform' : 'Bayaran')}
+        ${item(role === 'Super Admin' ? 'shop' : 'subscription', subscriptionLink, 'external', role === 'Super Admin' ? 'Website' : 'Langganan', role === 'Super Admin' ? 'Landing' : 'Plan & link')}
         ${shopSettingsItem}
       </nav>
-      <div class="admin-user"><b>${escapeHtml(userLabel || title)}</b><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
+      <div class="admin-user"><div><b>${escapeHtml(userLabel || title)}</b><small>${escapeHtml(badgeLabel(role))}</small></div><a href="/logout"><span class="side-icon logout" aria-hidden="true"></span> Logout</a></div>
     </aside>
     <section class="admin-main">
-      <header class="admin-topbar"><div><p>${escapeHtml(subtitle)}</p><h1>${escapeHtml(title)}</h1></div><a class="admin-menu-button" href="/logout">Logout</a></header>
+      <header class="admin-topbar"><div><span class="admin-role-badge">${escapeHtml(badgeLabel(role))}</span><p>${escapeHtml(subtitle)}</p><h1>${escapeHtml(title)}</h1></div><div class="admin-topbar-actions">${headerActions ? headerActions : ''}<a class="admin-menu-button" href="/logout">Logout</a></div></header>
       ${body}
     </section>
   </main>`;
@@ -285,14 +1252,49 @@ function displayDateTime(value) {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : '-';
 }
 
+function displayDateShort(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('en-GB') : '-';
+}
+
+function planStatusLabel(status = '') {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'active') return 'Active';
+  if (normalized === 'inactive') return 'Inactive';
+  if (normalized === 'pending') return 'Pending';
+  if (normalized === 'paid') return 'Paid';
+  if (normalized === 'pilot_free') return 'Pilot';
+  return status ? String(status) : 'All';
+}
+
+function copyScript() {
+  return `<script>
+      document.querySelectorAll('[data-copy-link]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const link = button.getAttribute('data-copy-link');
+          const fullLink = link.startsWith('http') ? link : location.origin + link;
+          try {
+            await navigator.clipboard.writeText(fullLink);
+            const previous = button.textContent;
+            button.textContent = 'Copied';
+            window.setTimeout(() => { button.textContent = previous; }, 1200);
+          } catch {
+            button.textContent = link;
+          }
+        });
+      });
+    </script>`;
+}
+
 export function subscriptionPage({ user, shop, subscription = null, payment = null }) {
   const publicLink = `/shop/${escapeHtml(shop.slug)}`;
   const label = subscription?.plan_label || planLabel(subscription?.plan || shop.plan);
   const status = shop.subscription_status || subscription?.payment_status || 'pilot_free';
   const amount = subscription?.amount ?? payment?.amount ?? 0;
+  const headerActions = `${shopLinkAction(publicLink)}${shopCopyAction(publicLink)}`;
   const body = `<section class="admin-detail subscription-detail">
-    <p class="eyebrow">Langganan kedai</p>
-    <div class="detail-title"><div><h1>Maklumat Langganan</h1><p>${escapeHtml(shop.name)} · ${publicLink}</p></div><span class="status-chip ${statusClass(status)}">${escapeHtml(status)}</span></div>
+    <p class="eyebrow">Langganan</p>
+    <div class="detail-title"><div><h1>Status Pelan</h1><p>${escapeHtml(shop.name)} · Link kedai aktif</p></div><span class="status-chip ${statusClass(status)}">${escapeHtml(status)}</span></div>
     <div class="receipt detail-grid">
       <p><span>Plan</span><b>${escapeHtml(label)}</b></p>
       <p><span>Status</span><b>${escapeHtml(status)}</b></p>
@@ -301,46 +1303,32 @@ export function subscriptionPage({ user, shop, subscription = null, payment = nu
       <p><span>Amount Paid</span><b>${formatMoney(amount)}</b></p>
       <p><span>Created</span><b>${displayDateTime(subscription?.created_at || shop.created_at)}</b></p>
       <p><span>Paid At</span><b>${displayDateTime(payment?.paid_at)}</b></p>
-      <p><span>Public Shop Link</span><b><a href="${publicLink}">${publicLink}</a></b></p>
+      <p><span>Link Kedai</span><b><span class="shop-path-row"><a href="${publicLink}">${publicLink}</a>${copyUrlButton(publicLink, 'Salin')}</span></b></p>
     </div>
-    <div class="detail-actions">
-      <a class="button" href="${publicLink}">Buka Link Kedai</a>
-      <button class="button ghost" type="button" data-copy-link="${publicLink}">Copy link</button>
-    </div>
-    <script>
-      document.querySelector('[data-copy-link]')?.addEventListener('click', async (event) => {
-        const button = event.currentTarget;
-        const link = button.getAttribute('data-copy-link');
-        try {
-          await navigator.clipboard.writeText(location.origin + link);
-          button.textContent = 'Copied';
-        } catch {
-          button.textContent = link;
-        }
-      });
-    </script>
   </section>`;
-  return layout('Langganan', adminShell({ title: 'Langganan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, active: 'subscription', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+  return layout('Langganan', adminShell({ title: 'Langganan', subtitle: 'Semak status langganan dan link kedai anda.', userLabel: user.email, active: 'subscription', role: 'Shop Dashboard', shopSlug: shop.slug, body, headerActions }), shop.primary_color);
 }
 
-function metricCard(label, value, tone = 'blue', icon = 'orders', featured = false) {
-  return `<article class="admin-kpi ${tone} ${featured ? 'featured' : ''}"><div><span>${escapeHtml(label)}</span><b>${value}</b></div><i class="kpi-icon ${icon}" aria-hidden="true"></i></article>`;
+function metricCard(label, value, tone = 'blue', icon = 'orders', featured = false, helper = '') {
+  return `<article class="admin-kpi ${tone} ${featured ? 'featured' : ''}"><div><span>${escapeHtml(label)}</span><b>${value}</b>${helper ? `<small>${escapeHtml(helper)}</small>` : ''}</div><i class="kpi-icon ${icon}" aria-hidden="true"></i></article>`;
 }
 
-function storyBand(title, subtitle, stats = [], cta = '') {
+function storyBand(title, subtitle, stats = [], cta = '', actions = []) {
   const statMarkup = stats.map((stat) => `<div><span>${escapeHtml(stat.label)}</span><b>${stat.value}</b><small>${escapeHtml(stat.hint || '')}</small></div>`).join('');
+  const actionMarkup = actions.length ? `<div class="summary-actions">${actions.map((action) => action.copy ? shopCopyAction(action.href, action.label) : shopLinkAction(action.href, action.label)).join('')}</div>` : '';
   return `<section class="admin-story-band">
     <div class="admin-story-copy">
-      <p class="eyebrow">Ringkasan live</p>
+      <p class="eyebrow">Ringkasan order</p>
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(subtitle)}</p>
       ${cta ? `<a class="button" href="${escapeHtml(cta.href)}">${escapeHtml(cta.label)}</a>` : ''}
+      ${actionMarkup}
     </div>
     <div class="admin-story-stats">${statMarkup}</div>
   </section>`;
 }
 
-export function shopDashboardSnapshot({ orders }) {
+export function shopDashboardSnapshot({ orders, publicLink = '' }) {
   const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
   const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
@@ -353,15 +1341,21 @@ export function shopDashboardSnapshot({ orders }) {
     readyOrders,
     todayPickups,
     orderCountLabel: `${orders.length} total`,
-    orderRows: orderRows || '<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai untuk mula terima order berbayar.</span></td></tr>'
+    orderRows: orderRows || `<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai anda untuk mula terima order berbayar.</span>${publicLink ? `<div class="empty-state-actions">${shopLinkAction(publicLink)}${shopCopyAction(publicLink, 'Salin Link Kedai')}</div>` : ''}</td></tr>`
   };
 }
 
 export function shopDashboard({ user, shop, orders }) {
-  const snapshot = shopDashboardSnapshot({ orders });
+  const publicLink = `/shop/${escapeHtml(shop.slug)}`;
+  const snapshot = shopDashboardSnapshot({ orders, publicLink });
+  const headerActions = `${shopLinkAction(publicLink)}${shopCopyAction(publicLink)}`;
+  const leadTitle = snapshot.totalOrders ? `${snapshot.readyOrders} order sudah ready untuk pickup` : 'Belum ada order lagi';
+  const leadSubtitle = snapshot.totalOrders
+    ? `${snapshot.activeOrders} order masih bergerak · ${snapshot.todayPickups} pickup hari ini`
+    : 'Kongsi link kedai anda untuk mula terima order berbayar.';
   const body = `${storyBand(
-      `${snapshot.readyOrders} order sudah ready untuk pickup`,
-      `${snapshot.activeOrders} order masih bergerak · ${snapshot.todayPickups} pickup hari ini`,
+      leadTitle,
+      leadSubtitle,
       [
         { label: 'Total order', value: snapshot.totalOrders, hint: 'keseluruhan queue' },
         { label: 'Aktif', value: snapshot.activeOrders, hint: 'belum selesai' },
@@ -396,11 +1390,12 @@ export function shopDashboard({ user, shop, orders }) {
         startDashboardPolling();
       }
     </script>`;
-  return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: `${shop.name} Dashboard`, userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+  return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: 'Pantau order print dan pickup pelanggan.', userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body, headerActions }), shop.primary_color);
 }
 
 export function shopSettingsPage({ user, shop, pricing = {}, products = [], paperSizes = [], updated = false }) {
   const publicLink = `/shop/${escapeHtml(shop.slug)}`;
+  const headerActions = `${shopLinkAction(publicLink)}${shopCopyAction(publicLink)}`;
   const successBanner = updated ? '<div class="admin-success" role="status">Tetapan kedai berjaya dikemaskini.</div>' : '';
   const paperSizeRows = paperSizes.map((size) => String(size.id).startsWith('legacy-a4-')
     ? `<div class="product-edit-row paper-size-legacy"><label>Saiz <input readonly value="${escapeHtml(size.label)}"></label><label>B/W per page (RM) <input readonly value="${formatMoney(size.bw_price_per_page)}"></label><label>Color per page (RM) <input readonly value="${formatMoney(size.color_price_per_page)}"></label><p class="muted">A4 legacy. Tambah saiz baru untuk aktifkan manager.</p></div>`
@@ -413,26 +1408,26 @@ export function shopSettingsPage({ user, shop, pricing = {}, products = [], pape
     </form>`).join('');
   const productRows = products.map((product) => `<form class="product-edit-row" method="post" action="/admin/products/${escapeHtml(product.id)}">
     <label>Nama <input required name="name" value="${escapeHtml(product.name)}"></label>
-    <label>Description <input name="description" value="${escapeHtml(product.description || '')}"></label>
+    <label>Penerangan <input name="description" value="${escapeHtml(product.description || '')}"></label>
     <label>Harga (RM) <input required type="number" min="0" step="0.01" name="price" value="${Number(product.price).toFixed(2)}"></label>
     <label class="check product-active"><input type="checkbox" name="is_active" ${product.is_active ? 'checked' : ''}> <span>Aktif</span></label>
     <button type="submit">Simpan Produk</button>
   </form>`).join('');
   const body = `${successBanner}<form class="admin-settings-form" method="post" action="/admin/settings">
     <section class="admin-panel settings-panel">
-      <div class="panel-head"><div><p class="eyebrow">Maklumat kedai</p><h2>Profil public shop</h2></div><span>Link dikunci: ${publicLink}</span></div>
+      <div class="panel-head"><div><p class="eyebrow">Maklumat kedai</p><h2>Profil kedai</h2></div><span>Link dikunci: ${publicLink}</span></div>
       <div class="settings-grid">
         <label>Nama kedai <input required name="name" value="${escapeHtml(shop.name)}"></label>
         <label>Telefon kedai <input required name="phone" value="${escapeHtml(shop.phone)}" inputmode="tel"></label>
-        <label class="settings-full">Description <textarea required name="description">${escapeHtml(shop.description)}</textarea></label>
+        <label class="settings-full">Penerangan <textarea required name="description">${escapeHtml(shop.description)}</textarea></label>
         <label class="settings-full">Alamat / kawasan <textarea required name="address">${escapeHtml(shop.address)}</textarea></label>
         <label>Google Maps URL <input name="google_maps_url" type="url" value="${escapeHtml(shop.google_maps_url)}"></label>
         <label>Waktu operasi <input required name="operating_hours" value="${escapeHtml(shop.operating_hours)}"></label>
         <label>Warna utama <input required name="primary_color" type="color" value="${escapeHtml(shop.primary_color || '#062b66')}"></label>
-        <label>Public link <input readonly value="${publicLink}" aria-label="Public shop link"></label>
+        <label>Link kedai <input readonly value="${publicLink}" aria-label="Public shop link"></label>
       </div>
     </section>
-    <div class="settings-actions"><button type="submit">Simpan Tetapan</button><a class="button ghost" href="${publicLink}">Buka Link Kedai</a></div>
+    <div class="settings-actions"><button type="submit">Simpan Tetapan</button></div>
   </form>
   <section class="admin-panel settings-panel product-manager">
     <div class="panel-head"><div><p class="eyebrow">Pricing</p><h2>Harga ikut saiz kertas</h2></div><span>Dipaparkan di page order</span></div>
@@ -487,7 +1482,7 @@ export function shopSettingsPage({ user, shop, pricing = {}, products = [], pape
       </details>
     </div>
   </section>`;
-  return layout('Tetapan Kedai', adminShell({ title: 'Tetapan Kedai', subtitle: `${shop.name} Dashboard`, userLabel: user.email, active: 'settings', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
+  return layout('Tetapan Kedai', adminShell({ title: 'Tetapan Kedai', subtitle: 'Urus profil kedai, harga, dan tetapan order.', userLabel: user.email, active: 'settings', role: 'Shop Dashboard', shopSlug: shop.slug, body, headerActions }), shop.primary_color);
 }
 
 
@@ -514,11 +1509,48 @@ function displayDate(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
 }
 
-export function revenuePage({ user, shop = null, shops = [], orders = [], payments = [], subscriptions = [], mode = 'orders', selectedDate = '', page = 1 }) {
-  const today = new Date().toISOString().slice(0, 10);
-  const reportDate = normalizeDateInput(selectedDate);
-  const month = reportDate.slice(0, 7);
-  const year = reportDate.slice(0, 4);
+function normalizeRangeInput(value) {
+  const range = String(value || '').toLowerCase();
+  if (['today', 'week', 'month', 'year'].includes(range)) return range;
+  return 'month';
+}
+
+function toUtcDateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function rangeWindow(range, baseDate = new Date()) {
+  const base = new Date(baseDate);
+  const safeBase = Number.isNaN(base.getTime()) ? new Date() : base;
+  const end = new Date(Date.UTC(safeBase.getUTCFullYear(), safeBase.getUTCMonth(), safeBase.getUTCDate(), 23, 59, 59, 999));
+  let start = new Date(end);
+  if (range === 'today') {
+    start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate(), 0, 0, 0, 0));
+  } else if (range === 'week') {
+    const day = end.getUTCDay();
+    start = new Date(end);
+    start.setUTCDate(end.getUTCDate() - day);
+    start.setUTCHours(0, 0, 0, 0);
+  } else if (range === 'year') {
+    start = new Date(Date.UTC(end.getUTCFullYear(), 0, 1, 0, 0, 0, 0));
+  } else {
+    start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1, 0, 0, 0, 0));
+  }
+  return { start, end };
+}
+
+function filterByWindow(items, getDate, range, baseDate) {
+  const { start, end } = rangeWindow(range, baseDate);
+  return items.filter((item) => {
+    const date = new Date(getDate(item));
+    return !Number.isNaN(date.getTime()) && date >= start && date <= end;
+  });
+}
+
+export function revenuePage({ user, shop = null, shops = [], orders = [], payments = [], subscriptions = [], mode = 'orders', selectedDate = '', range = '', page = 1 }) {
+  const reportDate = normalizeDateInput(selectedDate || new Date().toISOString().slice(0, 10));
+  const activeRange = normalizeRangeInput(range);
+  const baseDate = new Date(`${reportDate}T00:00:00Z`);
   const source = payments
     .filter((p) => p.status === 'paid' && p.paid_at)
     .filter((p) => mode === 'subscriptions' ? p.subscription_id : p.order_id)
@@ -526,37 +1558,87 @@ export function revenuePage({ user, shop = null, shops = [], orders = [], paymen
       const order = payment.order_id ? orders.find((o) => o.id === payment.order_id) : null;
       const subscription = payment.subscription_id ? subscriptions.find((s) => s.id === payment.subscription_id) : null;
       const paymentShop = order ? shops.find((s) => s.id === order.shop_id) : null;
-      return { payment, order, subscription, shop: shop || paymentShop, parts: dateParts(payment.paid_at), amount: Number(payment.amount || 0) };
+      const effectiveShop = shop || paymentShop || (subscription?.shop_id ? shops.find((s) => s.id === subscription.shop_id) : null);
+      return { payment, order, subscription, shop: effectiveShop, parts: dateParts(payment.paid_at), amount: Number(payment.amount || 0) };
     })
     .sort((a, b) => String(b.payment.paid_at).localeCompare(String(a.payment.paid_at)));
+  const filteredRows = activeRange === 'month'
+    ? source.filter((item) => item.parts.month === reportDate.slice(0, 7))
+    : filterByWindow(source, (item) => item.payment.paid_at, activeRange, baseDate);
   const daily = source.filter((item) => item.parts.day === reportDate);
-  const monthly = source.filter((item) => item.parts.month === month);
-  const yearly = source.filter((item) => item.parts.year === year);
-  const visibleRows = source.filter((item) => item.parts.month === month);
+  const weekly = filterByWindow(source, (item) => item.payment.paid_at, 'week', baseDate);
+  const monthly = source.filter((item) => item.parts.month === reportDate.slice(0, 7));
+  const yearly = source.filter((item) => item.parts.year === reportDate.slice(0, 4));
+  const visibleRows = filteredRows;
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const currentPage = Math.min(Math.max(Number.isFinite(page) ? page : 1, 1), totalPages);
   const pageRows = visibleRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const queryDate = `date=${encodeURIComponent(reportDate)}`;
+  const queryParts = new URLSearchParams();
+  queryParts.set('date', reportDate);
+  if (activeRange) queryParts.set('range', activeRange);
+  const queryDate = queryParts.toString();
   const pagination = visibleRows.length > pageSize ? `<div class="table-pagination"><a class="page-link ${currentPage === 1 ? 'disabled' : ''}" ${currentPage === 1 ? 'aria-disabled="true"' : `href="/admin/revenue?${queryDate}&page=${currentPage - 1}"`}>Sebelumnya</a><span>Page ${currentPage} / ${totalPages}</span><a class="page-link ${currentPage === totalPages ? 'disabled' : ''}" ${currentPage === totalPages ? 'aria-disabled="true"' : `href="/admin/revenue?${queryDate}&page=${currentPage + 1}"`}>Seterusnya</a></div>` : '';
+  const isSubscriptionReport = mode === 'subscriptions';
   const rows = pageRows.map((item) => {
     const ref = item.order?.order_code || item.subscription?.subscription_code || item.payment.gateway_reference || item.payment.id;
-    const sourceLabel = mode === 'subscriptions'
-      ? `${item.subscription?.plan_label || 'Langganan'}${item.shop ? ` · ${escapeHtml(item.shop.name)}` : ''}`
-      : `${item.order?.customer_name ? escapeHtml(item.order.customer_name) : 'Order print'}${item.order?.customer_phone ? `<small>${escapeHtml(item.order.customer_phone)}</small>` : ''}`;
-    return `<tr><td>${new Date(item.payment.paid_at).toLocaleString()}</td><td><b>${escapeHtml(ref)}</b></td><td>${sourceLabel}</td><td><b>${formatMoney(item.amount)}</b></td></tr>`;
+    const paymentLabel = item.payment.status === 'paid' ? 'Paid' : planStatusLabel(item.payment.status);
+    if (!isSubscriptionReport) {
+      const customer = item.order?.customer_name || item.payment.customer_name || '-';
+      const customerPhone = item.order?.customer_phone || item.payment.customer_phone || '';
+      return `<tr><td>${displayDateTime(item.payment.paid_at)}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(customer)}</b>${customerPhone ? `<small>${escapeHtml(customerPhone)}</small>` : ''}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
+    }
+    const shopName = item.shop?.name || item.order?.customer_name || '-';
+    const plan = item.subscription?.plan_label || item.shop?.plan || 'Paid';
+    const sourceLabel = `${escapeHtml(plan)}${item.shop ? `<small>${escapeHtml(item.shop.name)}</small>` : ''}`;
+    return `<tr><td>${new Date(item.payment.paid_at).toLocaleString()}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(shopName)}</b>${item.shop ? `<small>/shop/${escapeHtml(item.shop.slug)}</small>` : ''}</td><td>${sourceLabel}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
   }).join('');
-  const title = 'Ringkasan Hasil';
-  const subtitle = mode === 'subscriptions' ? 'Revenue langganan platform' : `${shop?.name || 'Kedai'} Revenue`;
+  const title = isSubscriptionReport ? 'Revenue Overview' : 'Hasil Order';
+  const subtitle = isSubscriptionReport ? 'Track paid subscriptions and platform revenue.' : 'Pantau bayaran order print yang berjaya.';
+  const currentRangeLabel = activeRange === 'today' ? 'Today' : activeRange === 'week' ? 'This Week' : activeRange === 'year' ? 'This Year' : 'This Month';
+  const headerActions = isSubscriptionReport ? `<button class="admin-action primary" type="button" disabled aria-disabled="true">Export CSV</button>` : '';
   const body = `<section class="admin-kpi-grid revenue-kpis">
-      ${metricCard('Hasil Tarikh Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true)}
-      ${metricCard('Bulan Ini', formatMoney(sumAmount(monthly)), 'blue', 'paid')}
-      ${metricCard('Tahun Ini', formatMoney(sumAmount(yearly)), 'yellow', 'alert')}
-      ${metricCard('Jumlah Transaksi', source.length, 'green', 'check')}
+      ${metricCard('Hasil Tarikh Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true, `Paparan: ${displayDate(reportDate)}`)}
+      ${metricCard('Bulan Ini', formatMoney(sumAmount(monthly)), 'blue', 'paid', false, `${weekly.length} transaksi minggu ini`)}
+      ${metricCard('Tahun Ini', formatMoney(sumAmount(yearly)), 'yellow', 'alert', false, `${currentRangeLabel} aktif`)}
+      ${metricCard('Jumlah Transaksi', source.length, 'green', 'check', false, `${source.length ? 'Transaksi berbayar' : 'Belum ada transaksi'}`)}
     </section>
-    <section class="admin-panel revenue-panel"><div class="panel-head"><div><p class="eyebrow">Pemantauan hasil</p><h2>${mode === 'subscriptions' ? 'Langganan Berbayar' : 'Order Berbayar'}</h2><p class="revenue-date-note">Paparan berdasarkan tarikh: ${displayDate(reportDate)}</p></div><span>${source.length} transaksi</span></div><form class="revenue-filter" method="get" action="/admin/revenue"><label>Tarikh <input type="date" name="date" value="${escapeHtml(reportDate)}" aria-label="Pilih tarikh revenue"></label><a href="/admin/revenue">Hari Ini</a></form><script>document.querySelector('.revenue-filter input[name="date"]')?.addEventListener('change', (event) => { if (event.target.value) location.href = '/admin/revenue?date=' + encodeURIComponent(event.target.value); });</script><div class="table-wrap"><table><thead><tr><th>Paid At</th><th>Reference</th><th>Source</th><th>Amount</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="4"><b>Belum ada hasil berbayar.</b><span>Transaksi akan muncul selepas bayaran berjaya.</span></td></tr>'}</tbody></table></div>${pagination}</section>`;
+    <section class="admin-panel revenue-panel">
+      <div class="panel-head revenue-head">
+        <div><p class="eyebrow">Pemantauan hasil</p><h2>${isSubscriptionReport ? 'Langganan Berbayar' : 'Order Berbayar'}</h2><p class="revenue-date-note">Paparan berdasarkan tarikh: ${displayDate(reportDate)}</p></div>
+        <span>${source.length} transaksi</span>
+      </div>
+      <form class="revenue-filter" method="get" action="/admin/revenue">
+        <div class="revenue-range-links">
+          <a class="${activeRange === 'today' ? 'active' : ''}" href="/admin/revenue?date=${encodeURIComponent(reportDate)}&range=today">Today</a>
+          <a class="${activeRange === 'week' ? 'active' : ''}" href="/admin/revenue?date=${encodeURIComponent(reportDate)}&range=week">This Week</a>
+          <a class="${activeRange === 'month' ? 'active' : ''}" href="/admin/revenue?date=${encodeURIComponent(reportDate)}&range=month">This Month</a>
+          <a class="${activeRange === 'year' ? 'active' : ''}" href="/admin/revenue?date=${encodeURIComponent(reportDate)}&range=year">This Year</a>
+        </div>
+        <label>Tarikh <input type="date" name="date" value="${escapeHtml(reportDate)}" aria-label="Pilih tarikh revenue"></label>
+        <input type="hidden" name="range" value="${escapeHtml(activeRange)}">
+        <a href="/admin/revenue">Hari Ini</a>
+      </form>
+      <script>
+        document.querySelector('.revenue-filter input[name="date"]')?.addEventListener('change', (event) => {
+          if (event.target.value) {
+            const params = new URLSearchParams(location.search);
+            params.set('date', event.target.value);
+            if (!params.get('range')) params.set('range', 'month');
+            location.href = '/admin/revenue?' + params.toString();
+          }
+        });
+      </script>
+      <div class="table-wrap">
+        <table>
+          <thead>${isSubscriptionReport ? '<tr><th>Paid At</th><th>Reference</th><th>Shop</th><th>Plan</th><th>Amount</th><th>Payment</th></tr>' : '<tr><th>Paid At</th><th>Order ID</th><th>Customer</th><th>Amount</th><th>Payment</th></tr>'}</thead>
+          <tbody>${rows || (isSubscriptionReport ? '<tr><td class="empty-state" colspan="6"><b>Belum ada transaksi berbayar.</b><span>Langganan yang berjaya dibayar akan dipaparkan di sini.</span></td></tr>' : '<tr><td class="empty-state" colspan="5"><b>Belum ada transaksi berbayar.</b><span>Bayaran order pelanggan akan dipaparkan di sini.</span></td></tr>')}</tbody>
+        </table>
+      </div>
+      ${pagination}
+    </section>`;
   const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
-  return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: 'revenue', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
+  return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: 'revenue', role, shopSlug: shop?.slug || '', body, headerActions }), shop?.primary_color);
 }
 
 export function ordersManagementPage({ user, shop = null, shops = [], orders, updated = false, page = 1 }) {
@@ -583,10 +1665,10 @@ export function ordersManagementPage({ user, shop = null, shops = [], orders, up
       ${metricCard('Sedia Pickup', readyOrders, 'yellow', 'alert')}
       ${metricCard('Pickup Hari Ini', todayPickups, 'green', 'check')}
     </section>
-    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan kerja</p><h2>Senarai Order</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="8"><b>Belum ada order.</b><span>Order pelanggan akan muncul di sini selepas checkout.</span></td></tr>'}</tbody></table></div>${pagination}</section>`;
+    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan kerja</p><h2>Order Pelanggan</h2></div><span>${orders.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="8"><b>Belum ada order.</b><span>Order pelanggan akan muncul di sini selepas checkout.</span></td></tr>'}</tbody></table></div>${pagination}</section>`;
   const role = user.role === 'super_admin' ? 'Super Admin' : 'Shop Dashboard';
   const title = 'Pengurusan Order';
-  const subtitle = shop ? `${shop.name} Dashboard` : 'Semua order platform';
+  const subtitle = shop ? 'Urus senarai order pelanggan.' : 'Semua order platform';
   return layout(title, adminShell({ title, subtitle, userLabel: user.email, active: user.role === 'super_admin' ? '' : 'orders', role, shopSlug: shop?.slug || '', body }), shop?.primary_color);
 }
 
@@ -601,46 +1683,197 @@ export function orderDetails({ order, shop, slot, user, updated = false }) {
   return layout(order.order_code, adminShell({ title: order.order_code, subtitle: 'Order detail', userLabel: user?.email || shop.name, active: 'orders', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
-export function superDashboard({ shops, orders, subscriptions = [] }) {
+function superShopSummary(shops, orders, subscriptions) {
   const successfulSubscriptions = subscriptions.filter((s) => s.payment_status === 'paid').length;
   const activeShops = shops.filter((s) => s.is_active).length;
-  const rows = shops.map((s) => `<tr><td><b>${escapeHtml(s.name)}</b><small>/shop/${escapeHtml(s.slug)}</small></td><td><span class="status-chip ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td>${escapeHtml(s.plan)}</td><td><span class="pill ${statusClass(s.subscription_status)}">${escapeHtml(s.subscription_status)}</span></td><td>${orders.filter((o) => o.shop_id === s.id).length}</td><td>${new Date(s.created_at).toLocaleDateString()}</td></tr>`).join('');
+  const now = new Date();
+  return {
+    activeShops,
+    successfulSubscriptions,
+    totalShops: shops.length,
+    revenueThisMonth: subscriptions.filter((s) => {
+      if (s.payment_status !== 'paid') return false;
+      const paidAt = new Date(s.updated_at || s.created_at || '');
+      return !Number.isNaN(paidAt.getTime()) && paidAt.getFullYear() === now.getFullYear() && paidAt.getMonth() === now.getMonth();
+    }).reduce((sum, s) => sum + Number(s.amount || 0), 0)
+  };
+}
+
+function superShopCard(shop, orders, subscriptions) {
+  const orderCount = orders.filter((o) => o.shop_id === shop.id).length;
+  const subscription = subscriptions.find((sub) => sub.shop_id === shop.id) || null;
+  const slugLink = `/shop/${escapeHtml(shop.slug)}`;
+  const plan = planLabel(shop.plan);
+  const statusBadge = shop.is_active ? 'active' : 'inactive';
+  const paymentBadge = statusClass(shop.subscription_status);
+  return `<tr>
+      <td class="shop-cell">
+        <a class="admin-link" href="/admin/shops/${escapeHtml(shop.id)}"><b>${escapeHtml(shop.name)}</b></a>
+        <div class="shop-path-row"><span>${slugLink}</span>${copyUrlButton(slugLink, 'Copy')}</div>
+      </td>
+      <td><span class="status-chip ${statusBadge}">${shop.is_active ? 'Active' : 'Inactive'}</span></td>
+      <td><span class="plan-chip ${statusClass(shop.plan)}">${escapeHtml(plan)}</span></td>
+      <td><span class="pill ${paymentBadge}">${escapeHtml(planStatusLabel(shop.subscription_status))}</span></td>
+      <td>${orderCount}</td>
+      <td>${displayDateShort(shop.created_at)}</td>
+      <td>${adminRowActions({ id: shop.id, slug: shop.slug, active: shop.is_active })}</td>
+    </tr>`;
+}
+
+function superTenantForm({ shop = null, action = '', created = false }) {
+  const isNew = !shop;
+  const defaults = shop || {
+    name: '',
+    slug: '',
+    email: '',
+    phone: '',
+    description: '',
+      plan: 'pilot',
+      subscription_status: 'pilot_free',
+      is_active: true,
+      primary_color: '#004581'
+  };
+  const passwordValue = isNew ? 'password' : '';
+  return `<section class="admin-panel super-tenant-form" id="edit">
+    <div class="panel-head">
+      <div><p class="eyebrow">${isNew ? 'Tambah tenant' : 'Tenant detail'}</p><h2>${isNew ? 'Tambah Tenant Baru' : 'Edit Tenant'}</h2><p class="revenue-date-note">${isNew ? 'Create a new tenant and its public shop page.' : 'Review tenant settings, public page, and status.'}</p></div>
+      <span>${escapeHtml(defaults.slug ? `/shop/${defaults.slug}` : 'Tenant draft')}</span>
+    </div>
+    ${created ? '<div class="admin-success" role="status">Tenant berjaya disimpan.</div>' : ''}
+    <form class="super-tenant-grid" method="post" action="${escapeHtml(action)}">
+      <label>Tenant name<input required name="name" value="${escapeHtml(defaults.name)}" placeholder="Contoh: Qalam Irma"></label>
+      <label>Public slug<input required name="slug" value="${escapeHtml(defaults.slug)}" placeholder="qalam-irma"></label>
+      <label>Owner email<input required type="email" name="email" value="${escapeHtml(defaults.email)}" placeholder="owner@kedai.com"></label>
+      <label>Temporary password<input name="password" value="${escapeHtml(passwordValue)}" placeholder="${isNew ? 'password' : 'leave blank to keep current'}"></label>
+      <label>Phone<input required name="phone" value="${escapeHtml(defaults.phone)}" placeholder="60123456789"></label>
+      <label>Plan<select name="plan">
+        <option value="pilot" ${String(defaults.plan) === 'pilot' ? 'selected' : ''}>Pilot</option>
+        <option value="monthly" ${String(defaults.plan) === 'monthly' ? 'selected' : ''}>Monthly</option>
+        <option value="yearly" ${String(defaults.plan) === 'yearly' ? 'selected' : ''}>Yearly</option>
+      </select></label>
+      <label>Subscription status<select name="subscription_status">
+        <option value="pilot_free" ${String(defaults.subscription_status) === 'pilot_free' ? 'selected' : ''}>pilot_free</option>
+        <option value="pending" ${String(defaults.subscription_status) === 'pending' ? 'selected' : ''}>pending</option>
+        <option value="paid" ${String(defaults.subscription_status) === 'paid' ? 'selected' : ''}>paid</option>
+        <option value="inactive" ${String(defaults.subscription_status) === 'inactive' ? 'selected' : ''}>inactive</option>
+      </select></label>
+      <label>Status<select name="is_active">
+        <option value="1" ${defaults.is_active ? 'selected' : ''}>Active</option>
+        <option value="0" ${!defaults.is_active ? 'selected' : ''}>Inactive</option>
+      </select></label>
+      <label>Primary color<input type="color" name="primary_color" value="${escapeHtml(defaults.primary_color || '#004581')}"></label>
+      <label class="tenant-full">Description<textarea name="description" placeholder="Ringkas public page">${escapeHtml(defaults.description || '')}</textarea></label>
+      <div class="tenant-actions">
+        <a class="admin-action ghost" href="/admin/shops">Back</a>
+        <button type="submit" class="admin-action primary">${isNew ? 'Tambah Tenant' : 'Simpan Tenant'}</button>
+      </div>
+    </form>
+  </section>`;
+}
+
+function filterShopsForAdmin(shops, { q = '', status = '', plan = '' } = {}) {
+  const query = String(q || '').trim().toLowerCase();
+  const statusFilter = String(status || '').toLowerCase();
+  const planFilter = String(plan || '').toLowerCase();
+  return shops.filter((shop) => {
+    const matchesQuery = !query || [shop.name, shop.slug, shop.email, shop.phone].some((value) => String(value || '').toLowerCase().includes(query));
+    const matchesStatus = !statusFilter || statusFilter === 'all' || (statusFilter === 'active' ? shop.is_active : statusFilter === 'inactive' ? !shop.is_active : true);
+    const matchesPlan = !planFilter || planFilter === 'all' || String(shop.plan || '').toLowerCase() === planFilter;
+    return matchesQuery && matchesStatus && matchesPlan;
+  });
+}
+
+export function superDashboard({ shops, orders, subscriptions = [], userEmail = 'owner@cetaknow.local' }) {
+  const stats = superShopSummary(shops, orders, subscriptions);
+  const rows = shops.map((s) => superShopCard(s, orders, subscriptions)).join('');
   const subscriptionRows = subscriptions.map((sub) => {
     const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
     const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
-    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(sub.payment_status)}</span></td><td>${shopCell}</td><td>${new Date(sub.created_at).toLocaleString()}</td></tr>`;
-  }).join('');
-  const body = `${storyBand(
-      `${activeShops} kedai aktif sedang beroperasi`,
-      `${successfulSubscriptions} langganan berbayar direkodkan · ${shops.length} tenant keseluruhan`,
-      [
-        { label: 'Jumlah kedai', value: shops.length, hint: 'tenant platform' },
-        { label: 'Aktif', value: activeShops, hint: 'sedang online' },
-        { label: 'Langganan', value: successfulSubscriptions, hint: 'bayaran berjaya' }
-      ],
-      { href: '#orders', label: 'Semak tenant' }
-    )}
-    <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Kedai</h2></div><span>${shops.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Shop</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div></section>
-    <section class="admin-panel lead-table"><div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan</h2></div><span>${subscriptions.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Code</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead><tbody>${subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'}</tbody></table></div></section>`;
-  return layout('Super Admin', adminShell({ title: 'CetakNow Super Admin', subtitle: 'Ringkasan Platform', userLabel: 'owner@cetaknow.local', role: 'Super Admin', body }));
-}
-
-export function shopsManagementPage({ user, shops, orders }) {
-  const activeShops = shops.filter((s) => s.is_active).length;
-  const inactiveShops = shops.length - activeShops;
-  const rows = shops.map((s) => {
-    const orderCount = orders.filter((o) => o.shop_id === s.id).length;
-    const actionLabel = s.is_active ? 'Nyahaktifkan' : 'Aktifkan';
-    const actionClass = s.is_active ? 'danger' : 'success';
-    return `<tr><td><b>${escapeHtml(s.name)}</b><small>/shop/${escapeHtml(s.slug)}</small></td><td><span class="status-chip ${s.is_active ? 'active' : 'inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td>${escapeHtml(s.plan)}</td><td><span class="pill ${statusClass(s.subscription_status)}">${escapeHtml(s.subscription_status)}</span></td><td>${orderCount}</td><td>${new Date(s.created_at).toLocaleDateString()}</td><td><form class="inline-action" method="post" action="/admin/shops/${s.id}/status"><button class="table-action ${actionClass}" type="submit">${actionLabel}</button></form></td></tr>`;
+    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(planStatusLabel(sub.payment_status))}</span></td><td>${shopCell}</td><td>${displayDateTime(sub.created_at)}</td></tr>`;
   }).join('');
   const body = `<section class="admin-kpi-grid">
-      ${metricCard('Jumlah Kedai', shops.length, 'red', 'orders', true)}
-      ${metricCard('Kedai Aktif', activeShops, 'blue', 'paid')}
-      ${metricCard('Tidak Aktif', inactiveShops, 'yellow', 'alert')}
+      ${metricCard('Total Shops', stats.totalShops, 'red', 'orders', true, 'Tenant keseluruhan')}
+      ${metricCard('Active Shops', stats.activeShops, 'blue', 'paid', false, 'Sedang beroperasi')}
+      ${metricCard('Paid Subscriptions', stats.successfulSubscriptions, 'yellow', 'alert', false, 'Bayaran berjaya')}
+      ${metricCard('Revenue This Month', formatMoney(stats.revenueThisMonth), 'green', 'check', false, 'Subscription revenue')}
     </section>
-    <section class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Pengurusan tenant</p><h2>Senarai Kedai</h2></div><span>${shops.length} total</span></div><div class="table-wrap"><table><thead><tr><th>Kedai</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>'}</tbody></table></div></section>`;
-  return layout('Pengurusan Kedai', adminShell({ title: 'Pengurusan Kedai', subtitle: 'Urus tenant CetakNow', userLabel: user.email, active: 'orders', role: 'Super Admin', body }));
+    <section id="orders" class="admin-panel">
+      <div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Shops</h2></div><span>${shops.length} total</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Shop</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th><th>Action</th></tr></thead>
+          <tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>'}</tbody>
+        </table>
+      </div>
+    </section>
+    <section class="admin-panel lead-table">
+      <div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan Berbayar</h2></div><span>${subscriptions.length} total</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead>
+          <tbody>${subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'}</tbody>
+        </table>
+      </div>
+    </section>${copyScript()}`;
+  return layout('Platform Overview', adminShell({ title: 'Platform Overview', subtitle: 'Manage shops, subscriptions, and revenue across CetakNow.', userLabel: userEmail, role: 'Super Admin', body }));
+}
+
+export function shopsManagementPage({ user, shops, orders, subscriptions = [], filters = {} }) {
+  const activeShops = shops.filter((s) => s.is_active).length;
+  const inactiveShops = shops.length - activeShops;
+  const filteredShops = filterShopsForAdmin(shops, filters);
+  const rows = filteredShops.map((s) => superShopCard(s, orders, subscriptions)).join('');
+  const body = `<section class="admin-kpi-grid">
+      ${metricCard('Jumlah Kedai', shops.length, 'red', 'orders', true, 'Tenant platform')}
+      ${metricCard('Kedai Aktif', activeShops, 'blue', 'paid', false, 'Online sekarang')}
+      ${metricCard('Tidak Aktif', inactiveShops, 'yellow', 'alert', false, 'Perlu semakan')}
+    </section>
+    <section class="admin-panel">
+      <div class="panel-head panel-head-actions">
+        <div><p class="eyebrow">Pengurusan tenant</p><h2>Senarai Kedai</h2></div>
+      </div>
+      <form class="shop-filters" method="get" action="/admin/shops">
+        <label>Search shop name<input name="q" value="${escapeHtml(filters.q || '')}" placeholder="Search shop name..."></label>
+        <label>Status<select name="status">
+          <option value="all" ${!filters.status || filters.status === 'all' ? 'selected' : ''}>All</option>
+          <option value="active" ${filters.status === 'active' ? 'selected' : ''}>Active</option>
+          <option value="inactive" ${filters.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+        </select></label>
+        <label>Plan<select name="plan">
+          <option value="all" ${!filters.plan || filters.plan === 'all' ? 'selected' : ''}>All</option>
+          <option value="pilot" ${filters.plan === 'pilot' ? 'selected' : ''}>Pilot</option>
+          <option value="monthly" ${filters.plan === 'monthly' ? 'selected' : ''}>Monthly</option>
+          <option value="yearly" ${filters.plan === 'yearly' ? 'selected' : ''}>Yearly</option>
+        </select></label>
+        <div class="filter-actions">
+          <button type="submit" class="admin-action primary">Filter</button>
+          <a class="admin-action ghost" href="/admin/shops">Reset</a>
+        </div>
+      </form>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Kedai</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th><th>Action</th></tr></thead>
+          <tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>'}</tbody>
+        </table>
+      </div>
+    </section>${copyScript()}`;
+  return layout('Shop Management', adminShell({ title: 'Shop Management', subtitle: 'Manage tenant shops, public pages, plans, and shop status.', userLabel: user.email, active: 'orders', role: 'Super Admin', body }));
+}
+
+export function superShopDetailPage({ user, shop, orders, subscriptions = [], created = false }) {
+  const stats = {
+    orderCount: orders.filter((o) => o.shop_id === shop.id).length,
+    subscription: subscriptions.find((sub) => sub.shop_id === shop.id) || null
+  };
+  const body = `
+    <section class="admin-kpi-grid">
+      ${metricCard('Orders', stats.orderCount, 'red', 'orders', true, 'Platform usage')}
+      ${metricCard('Status', shop.is_active ? 'Active' : 'Inactive', 'blue', 'paid', false, 'Tenant state')}
+      ${metricCard('Plan', planLabel(shop.plan), 'yellow', 'alert', false, planStatusLabel(shop.subscription_status))}
+      ${metricCard('Subscription', planStatusLabel(stats.subscription?.payment_status || shop.subscription_status), 'green', 'check', false, shop.email || '-')}
+    </section>
+    ${superTenantForm({ shop, action: `/admin/shops/${escapeHtml(shop.id)}`, created })}${copyScript()}`;
+  return layout(shop.name, adminShell({ title: 'Shop Management', subtitle: 'Manage tenant shops, public pages, plans, and shop status.', userLabel: user.email, active: 'orders', role: 'Super Admin', body }));
 }
 
 export function mockPaymentPage(order) {
@@ -653,40 +1886,241 @@ export function mockSubscriptionPaymentPage(subscription) {
 
 export function subscriptionConfirmationPage(subscription, shop = null) {
   if (shop) {
-    return layout('Link kedai siap - CetakNow', `<main class="page narrow setup-page"><section class="card success setup-success"><p class="eyebrow">Page kedai siap</p><h1>Link CetakNow kedai anda sudah dijana.</h1><p>Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan.</p><div class="receipt shop-link-receipt"><p>Nama kedai: <b>${escapeHtml(shop.name)}</b></p><p>Link kedai: <a href="/shop/${escapeHtml(shop.slug)}"><b>/shop/${escapeHtml(shop.slug)}</b></a></p><p>Pelan: <b>${escapeHtml(subscription.plan_label)}</b></p><p>Login dashboard: <b>${escapeHtml(subscription.email)}</b></p></div><div class="setup-actions"><a class="button" href="/login">Log Masuk Dashboard</a><a class="button ghost" href="/shop/${escapeHtml(shop.slug)}">Buka Page Kedai</a><a class="button ghost" href="/">Kembali ke landing page</a></div></section></main>`, shop.primary_color);
+    return layout('Link kedai siap - CetakNow', `
+    <main class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mx-auto">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
+          <div class="bg-green-500 p-12 text-center text-white">
+            <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <p class="text-sm font-black uppercase tracking-[0.2em] mb-2 opacity-80">Setup Berjaya</p>
+            <h1 class="text-3xl md:text-4xl font-black leading-tight">Link CetakNow kedai anda sudah dijana!</h1>
+          </div>
+          
+          <div class="p-8 md:p-12 space-y-8">
+            <p class="text-center text-slate-600 font-medium text-lg">
+              Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan untuk mula terima order.
+            </p>
+            
+            <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Nama Kedai</span>
+                <span class="text-cn-deep font-black">${escapeHtml(shop.name)}</span>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Link Kedai</span>
+                <a href="/shop/${escapeHtml(shop.slug)}" class="text-cn-blue font-black underline hover:text-cn-navy transition-colors">/shop/${escapeHtml(shop.slug)}</a>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Pelan</span>
+                <span class="text-cn-deep font-black">${escapeHtml(subscription.plan_label)}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Login Email</span>
+                <span class="text-cn-deep font-black">${escapeHtml(subscription.email)}</span>
+              </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+              <a href="/login" class="flex-1 py-4 bg-cn-navy text-white text-center rounded-2xl font-black text-lg shadow-xl shadow-cn-navy/20 hover:scale-[1.02] active:scale-95 transition-all">Log Masuk Dashboard</a>
+              <a href="/shop/${escapeHtml(shop.slug)}" class="flex-1 py-4 bg-white text-cn-navy text-center border-2 border-slate-100 rounded-2xl font-black text-lg hover:bg-slate-50 transition-all">Buka Page Kedai</a>
+            </div>
+            <a href="/" class="block text-center text-slate-400 font-bold hover:text-slate-600 transition-colors py-2">Kembali ke landing page</a>
+          </div>
+        </div>
+      </div>
+    </main>`, shop.primary_color);
   }
 
-  return layout('Setup kedai - CetakNow', `<main class="page setup-page">
-    <section class="setup-hero card">
-      <div><p class="eyebrow">Payment successful</p><h1>Langganan berjaya. Sekarang setup page kedai anda.</h1><p>Isi maklumat minimum dahulu. Selepas submit, CetakNow terus jana link kedai untuk pelanggan buat order.</p></div>
-      <div class="setup-plan"><span>${escapeHtml(subscription.plan_label)}</span><b>${formatMoney(subscription.amount)}</b><small>${escapeHtml(subscription.subscription_code)}</small></div>
-    </section>
-    <section class="setup-grid">
-      <form class="card form shop-setup-form" method="post" action="/subscriptions/${escapeHtml(subscription.subscription_code)}/setup">
-        <h2>Maklumat kedai</h2>
-        <label>Nama kedai * <input required name="shop_name" autocomplete="organization" placeholder="Contoh: Student Print Seksyen 7"></label>
-        <label>Slug link kedai * <input required name="slug" pattern="[a-z0-9-]{3,64}" placeholder="student-print-seksyen-7" aria-describedby="slug-help"><small id="slug-help" class="muted">Link akan jadi /shop/<span class="slug-preview">nama-kedai</span></small></label>
-        <div class="two"><label>Telefon kedai * <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"></label><fieldset class="operating-hours-picker"><legend>Waktu operasi *</legend><input type="hidden" name="operating_hours" value="Mon-Sat, 9:00 AM - 9:00 PM"><div class="day-picker" aria-label="Pilih hari operasi"><label><input type="checkbox" value="Mon" checked>Mon</label><label><input type="checkbox" value="Tue" checked>Tue</label><label><input type="checkbox" value="Wed" checked>Wed</label><label><input type="checkbox" value="Thu" checked>Thu</label><label><input type="checkbox" value="Fri" checked>Fri</label><label><input type="checkbox" value="Sat" checked>Sat</label><label><input type="checkbox" value="Sun">Sun</label></div><div class="time-picker"><label>Buka <input type="time" class="open-time" value="09:00"></label><label>Tutup <input type="time" class="close-time" value="21:00"></label></div><small class="muted operating-preview">Waktu operasi: Mon-Sat, 9:00 AM - 9:00 PM</small></fieldset></div>
-        <label>Alamat / kawasan * <textarea required name="address" placeholder="Dekat kampus, mall, taman..."></textarea></label>
-        <label>Link lokasi kedai <input name="google_maps_url" type="url" placeholder="https://maps.google.com/..."><small class="muted">Optional. Paste link lokasi kedai dari Google Maps atau Waze.</small></label>
-        <div class="dashboard-account-block"><p class="eyebrow">Akaun dashboard owner</p><h3>Login untuk urus order kedai</h3><p class="muted">Email login: <b>${escapeHtml(subscription.email)}</b></p><div class="two"><label>Password dashboard * <input required name="password" type="password" minlength="6" autocomplete="new-password"></label><label>Sahkan password * <input required name="password_confirm" type="password" minlength="6" autocomplete="new-password"></label></div></div>
-        <button>Jana Link Kedai</button>
-        <p class="form-reassurance">Slot pickup asas dan harga default akan disediakan dahulu. Harga boleh dikemas kini kemudian dalam dashboard owner.</p>
-      </form>
-      <aside class="card setup-preview">
-        <p class="eyebrow">Preview link</p>
-        <h2>/shop/<span class="slug-preview">nama-kedai</span></h2>
-        <p>Page ini akan terima PDF, kira harga, ambil bayaran online, dan simpan order dalam dashboard staff.</p>
-        <ul class="tick-list"><li>Link kedai sendiri</li><li>Bayaran online</li><li>Dashboard order</li><li>Fail dipadam automatik</li></ul>
-      </aside>
-    </section>
+  return layout('Setup kedai - CetakNow', `
+  <main class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid lg:grid-cols-[1fr_380px] gap-8">
+        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
+          <div class="bg-cn-yellow p-10 md:p-12">
+            <div class="flex items-center gap-4 mb-4">
+              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-cn-deep">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17 4 12"/></svg>
+              </div>
+              <p class="text-sm font-black uppercase tracking-[0.2em] text-cn-deep/80">Bayaran Berjaya</p>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black text-cn-deep leading-tight">Sekarang, setup page kedai anda.</h1>
+            <p class="mt-6 text-cn-deep/70 font-bold text-lg leading-relaxed">
+              Isi maklumat minimum dahulu. Selepas hantar, CetakNow akan terus jana link kedai untuk pelanggan anda.
+            </p>
+          </div>
+          
+          <form class="p-8 md:p-12 space-y-10" method="post" action="/subscriptions/${escapeHtml(subscription.subscription_code)}/setup">
+            <div class="space-y-8">
+              <h2 class="text-2xl font-black text-cn-deep border-b-2 border-cn-yellow/30 pb-2 inline-block">Maklumat Kedai</h2>
+              
+              <div class="grid gap-6">
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Nama Kedai *</label>
+                  <input required name="shop_name" autocomplete="organization" placeholder="Contoh: Student Print Seksyen 7"
+                         class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Slug Link Kedai *</label>
+                  <div class="relative">
+                    <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold italic">/shop/</span>
+                    <input required name="slug" pattern="[a-z0-9-]{3,64}" placeholder="nama-kedai"
+                           class="w-full h-14 pl-20 pr-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                  </div>
+                  <p class="text-[10px] text-slate-400 font-bold italic pl-2">Contoh: cetaknow.com/shop/<span class="slug-preview text-cn-blue not-italic">nama-kedai</span></p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div class="space-y-2">
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Telefon Kedai *</label>
+                    <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"
+                           class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                  </div>
+                  
+                  <div class="space-y-2">
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Operasi *</label>
+                    <div class="relative">
+                      <input type="hidden" name="operating_hours" value="Mon-Sat, 9:00 AM - 9:00 PM">
+                      <button type="button" onclick="document.getElementById('hours-modal').showModal()" 
+                              class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 text-left font-bold text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-between">
+                        <span class="operating-preview truncate">Mon-Sat, 9:00 AM - 9:00 PM</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Alamat / Kawasan *</label>
+                  <textarea required name="address" placeholder="Dekat kampus, mall, taman..."
+                            class="w-full p-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all min-height-[100px]"></textarea>
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Link Lokasi Kedai (Optional)</label>
+                  <input name="google_maps_url" type="url" placeholder="https://maps.google.com/..."
+                         class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                </div>
+              </div>
+            </div>
+            
+            <div class="space-y-8 pt-6">
+              <h2 class="text-2xl font-black text-cn-deep border-b-2 border-cn-blue/30 pb-2 inline-block">Akaun Dashboard</h2>
+              <div class="p-6 bg-cn-ice rounded-3xl border border-cn-blue/10 mb-6">
+                <p class="text-sm font-bold text-slate-600">Email Login: <span class="text-cn-deep font-black">${escapeHtml(subscription.email)}</span></p>
+              </div>
+              
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Password Dashboard *</label>
+                  <input required name="password" type="password" minlength="6" autocomplete="new-password" placeholder="••••••••"
+                         class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                </div>
+                <div class="space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Sahkan Password *</label>
+                  <input required name="password_confirm" type="password" minlength="6" autocomplete="new-password" placeholder="••••••••"
+                         class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                </div>
+              </div>
+            </div>
+            
+            <div class="pt-8">
+              <button class="w-full py-5 bg-cn-blue text-white rounded-[1.5rem] font-black text-xl shadow-2xl shadow-cn-blue/20 hover:scale-[1.02] active:scale-95 transition-all">Jana Link Kedai</button>
+              <p class="mt-6 text-center text-slate-400 font-bold text-xs italic">
+                Harga print default dan slot pickup asas akan disediakan dahulu. Anda boleh kemas kini kemudian di dashboard.
+              </p>
+            </div>
+          </form>
+        </div>
+        
+        <aside class="space-y-8">
+          <div class="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-cn-navy/5">
+            <p class="text-xs font-black text-cn-blue uppercase tracking-widest mb-4">Ringkasan Pelan</p>
+            <div class="flex justify-between items-end mb-6">
+              <div>
+                <h3 class="text-xl font-black text-cn-deep">${escapeHtml(subscription.plan_label)}</h3>
+                <p class="text-xs text-slate-400 font-bold">${escapeHtml(subscription.subscription_code)}</p>
+              </div>
+              <div class="text-2xl font-black text-cn-deep">${formatMoney(subscription.amount)}</div>
+            </div>
+            <ul class="space-y-3">
+              <li class="flex items-center gap-3 text-sm font-bold text-slate-600">
+                <span class="text-cn-yellow"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Link kedai sendiri
+              </li>
+              <li class="flex items-center gap-3 text-sm font-bold text-slate-600">
+                <span class="text-cn-yellow"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Bayaran online
+              </li>
+              <li class="flex items-center gap-3 text-sm font-bold text-slate-600">
+                <span class="text-cn-yellow"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Dashboard order
+              </li>
+              <li class="flex items-center gap-3 text-sm font-bold text-slate-600">
+                <span class="text-cn-yellow"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span> Fail dipadam automatik
+              </li>
+            </ul>
+          </div>
+          
+          <div class="p-8 bg-cn-navy rounded-[2rem] text-white overflow-hidden relative">
+             <div class="relative z-10">
+               <h4 class="font-black mb-2 italic text-cn-yellow uppercase tracking-widest text-xs">Preview Link</h4>
+               <p class="text-lg font-black leading-tight mb-4">/shop/<span class="slug-preview">nama-kedai</span></p>
+               <p class="text-sm text-white/60 font-medium leading-relaxed">
+                 Page ini akan terima PDF, kira harga, ambil bayaran online, dan simpan order dalam dashboard anda.
+               </p>
+             </div>
+             <div class="absolute -right-10 -bottom-10 opacity-10 scale-[2] -rotate-12 pointer-events-none">
+               <img src="/public/assets/icon.png" alt="">
+             </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Hours Modal -->
+    <dialog id="hours-modal" class="p-0 rounded-3xl shadow-2xl backdrop:bg-cn-deep/60 backdrop:backdrop-blur-sm border-0">
+      <div class="w-full max-w-md bg-white">
+        <div class="p-8 bg-cn-blue text-white text-center">
+          <h3 class="text-2xl font-black">Waktu Operasi</h3>
+          <p class="text-white/70 font-bold text-sm mt-1">Pilih hari dan masa kedai dibuka.</p>
+        </div>
+        <div class="p-8 space-y-8">
+          <div class="space-y-4">
+            <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Hari Operasi</p>
+            <div class="flex flex-wrap gap-2">
+              ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => `
+                <label class="flex-1 min-w-[60px]">
+                  <input type="checkbox" value="${day}" ${day !== 'Sun' ? 'checked' : ''} class="peer hidden">
+                  <span class="block py-2 text-center rounded-xl bg-slate-50 border-2 border-slate-100 text-slate-400 font-bold text-xs peer-checked:bg-cn-ice peer-checked:border-cn-blue peer-checked:text-cn-blue cursor-pointer transition-all">${day}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Buka</label>
+              <input type="time" class="open-time w-full h-12 px-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-bold" value="09:00">
+            </div>
+            <div class="space-y-2">
+              <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Tutup</label>
+              <input type="time" class="close-time w-full h-12 px-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-bold" value="21:00">
+            </div>
+          </div>
+          
+          <button type="button" onclick="document.getElementById('hours-modal').close()" 
+                  class="w-full py-4 bg-cn-navy text-white rounded-2xl font-black text-lg shadow-xl shadow-cn-navy/20">Selesai</button>
+        </div>
+      </div>
+    </dialog>
+
     <script>
       const shopNameInput = document.querySelector('input[name="shop_name"]');
       const slugInput = document.querySelector('input[name="slug"]');
       const previews = document.querySelectorAll('.slug-preview');
       const operatingInput = document.querySelector('input[name="operating_hours"]');
       const operatingPreview = document.querySelector('.operating-preview');
-      const dayInputs = [...document.querySelectorAll('.day-picker input[type="checkbox"]')];
+      const dayInputs = [...document.querySelectorAll('#hours-modal input[type="checkbox"]')];
       const openTime = document.querySelector('.open-time');
       const closeTime = document.querySelector('.close-time');
       let slugTouched = false;
@@ -718,7 +2152,7 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
         const end = formatTime(closeTime?.value || '21:00');
         const value = dayLabel + ', ' + start + ' - ' + end;
         if (operatingInput) operatingInput.value = value;
-        if (operatingPreview) operatingPreview.textContent = 'Waktu operasi: ' + value;
+        if (operatingPreview) operatingPreview.textContent = value;
       }
       shopNameInput?.addEventListener('input', () => {
         if (!slugTouched && slugInput) slugInput.value = toSlug(shopNameInput.value);

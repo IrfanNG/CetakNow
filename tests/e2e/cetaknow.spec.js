@@ -118,9 +118,9 @@ test.beforeEach(async () => {
 
 test('login page matches CetakNow theme and routes new owners to pricing', async ({ page }) => {
   await page.goto('/login');
-  await expect(page.getByRole('heading', { name: 'Log Masuk Admin' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Selamat Kembali' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Log Masuk' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Belum ada akaun? Langgan' })).toHaveAttribute('href', '/#pricing');
+  await expect(page.getByRole('link', { name: 'Daftar Kedai Anda' })).toHaveAttribute('href', '/#pricing');
 });
 
 test('landing page explains SaaS and routes CTAs to pricing', async ({ page }) => {
@@ -254,8 +254,10 @@ test('happy path: customer pays, confirmation shown, shop admin sees order with 
   await expect(page.getByText('Total: RM5.00')).toBeVisible();
 
   await login(page, 'admin@qalamirma.local');
-  await expect(page.getByText('Qalam Irma Dashboard')).toBeVisible();
-  await expect(page.getByText('Ringkasan Live')).toHaveCount(1);
+  await expect(page.getByText('SHOP DASHBOARD')).toBeVisible();
+  await expect(page.getByText('Pantau order print dan pickup pelanggan.')).toBeVisible();
+  await expect(page.getByText('Ringkasan order')).toHaveCount(1);
+  await expect(page.getByRole('link', { name: 'Buka Link Kedai' })).toHaveAttribute('href', '/shop/qalamirma');
   await expect(page.locator('.admin-conversion')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'CN-QI-1001' })).toBeVisible();
   await page.getByRole('link', { name: 'CN-QI-1001' }).click();
@@ -287,8 +289,8 @@ test('customer can upload multiple PDF files in one order', async ({ page }) => 
 
 test('shop admin dashboard keeps only the live summary band', async ({ page }) => {
   await login(page, 'admin@qalamirma.local');
-  await expect(page.getByText('Qalam Irma Dashboard')).toBeVisible();
-  await expect(page.getByText('Ringkasan Live')).toBeVisible();
+  await expect(page.getByText('SHOP DASHBOARD')).toBeVisible();
+  await expect(page.getByText('Ringkasan order')).toBeVisible();
   await expect(page.locator('.admin-conversion')).toHaveCount(0);
   await expect(page.locator('.admin-ratio')).toHaveCount(0);
   await expect(page.getByText('Order Masuk')).toBeVisible();
@@ -313,6 +315,7 @@ test('shop admin can manage shop information and pricing without changing public
   await expect(page).toHaveURL('/admin/settings');
   await expect(page.getByRole('heading', { name: 'Tetapan Kedai' })).toBeVisible();
   await expect(page.locator('input[aria-label="Public shop link"]')).toHaveValue('/shop/qalamirma');
+  await expect(page.getByRole('link', { name: 'Buka Link Kedai' })).toHaveAttribute('href', '/shop/qalamirma');
 
   await page.fill('input[name="name"]', 'Qalam Irma Updated');
   await page.fill('textarea[name="description"]', 'Order PDF, bayar online, pickup tersusun.');
@@ -440,7 +443,7 @@ test('shop admin can monitor paid order revenue', async ({ page }) => {
   await createPaidOrder(page, { copies: '10', printType: 'color' });
   await login(page, 'admin@qalamirma.local');
   await page.goto('/admin/revenue');
-  await expect(page.getByRole('heading', { name: 'Ringkasan Hasil' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hasil Order' })).toBeVisible();
   await expect(page.getByText('Hasil Tarikh Ini')).toBeVisible();
   await expect(page.getByText('RM10.00')).toBeVisible();
   await expect(page.getByText('CN-QI-1001')).toBeVisible();
@@ -470,9 +473,9 @@ test('revenue table paginates selected month transactions', async ({ page }) => 
   await expect(page.getByText('Page 1 / 2')).toBeVisible();
   await expect(page.getByText('CN-QI-3012')).toBeVisible();
   await expect(page.getByText('CN-QI-3001')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Seterusnya' })).toHaveAttribute('href', '/admin/revenue?date=2026-05-12&page=2');
+  await expect(page.getByRole('link', { name: 'Seterusnya' })).toHaveAttribute('href', '/admin/revenue?date=2026-05-12&range=month&page=2');
   await page.getByRole('link', { name: 'Seterusnya' }).click();
-  await expect(page).toHaveURL('/admin/revenue?date=2026-05-12&page=2');
+  await expect(page).toHaveURL('/admin/revenue?date=2026-05-12&range=month&page=2');
   await expect(page.getByText('Page 2 / 2')).toBeVisible();
   await expect(page.getByText('CN-QI-3001')).toBeVisible();
 });
@@ -486,7 +489,7 @@ test('super admin can monitor paid subscription revenue', async ({ page }) => {
   await page.getByRole('button', { name: 'Simulate successful payment' }).click();
   await login(page, 'owner@cetaknow.local');
   await page.goto('/admin/revenue');
-  await expect(page.getByRole('heading', { name: 'Ringkasan Hasil' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Revenue Overview' })).toBeVisible();
   await expect(page.getByText('Langganan Berbayar')).toBeVisible();
   await expect(page.getByText('RM499.00')).toBeVisible();
   await expect(page.getByText('CN-SUB-1001')).toBeVisible();
@@ -495,14 +498,24 @@ test('super admin can monitor paid subscription revenue', async ({ page }) => {
 test('super admin sees SaaS metrics and Qalam Irma tenant', async ({ page }) => {
   await login(page, 'owner@cetaknow.local');
   await page.goto('/admin');
-  await expect(page.getByText('CetakNow Super Admin')).toBeVisible();
-  await expect(page.getByText('Ringkasan Live')).toBeVisible();
-  await expect(page.locator('.admin-kpi-grid')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Platform Overview' })).toBeVisible();
+  await expect(page.getByText('Super Admin')).toBeVisible();
+  await expect(page.getByText('Ringkasan live')).toBeVisible();
+  await expect(page.getByText('Total Shops')).toBeVisible();
+  await expect(page.getByText('Buka Demo Shop')).toBeVisible();
   await expect(page.locator('.admin-ratio')).toHaveCount(0);
   await expect(page.locator('.admin-conversion')).toHaveCount(0);
   await expect(page.getByText('Qalam Irma')).toBeVisible();
   await expect(page.getByText('pilot_free')).toBeVisible();
   await expect(page.getByText('FOKUS PLATFORM')).toHaveCount(0);
+});
+
+test('super admin has no tenant creation CTA', async ({ page }) => {
+  await login(page, 'owner@cetaknow.local');
+  await page.goto('/admin');
+  await expect(page.getByRole('link', { name: 'Tambah Kedai' })).toHaveCount(0);
+  await page.goto('/admin/shops');
+  await expect(page.getByRole('link', { name: 'Tambah Tenant Baru' })).toHaveCount(0);
 });
 
 test('paid order writes email notification log only after payment', async ({ page }) => {

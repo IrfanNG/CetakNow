@@ -10,7 +10,7 @@ import { isSlotAvailable, syncPickupSlotsForShop } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopDashboardSnapshot, shopPage, shopSettingsPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopDashboardSnapshot, shopPage, shopSettingsPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard, superShopDetailPage } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 const MAX_PDF_FILES = 10;
@@ -57,9 +57,16 @@ export async function app(req, res) {
     if (req.method === 'GET' && confirmMatch) return renderConfirmation(res, db, confirmMatch[1]);
 
     if (req.method === 'GET' && url.pathname === '/admin') return renderAdmin(req, res, db);
-    if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db);
+    if (req.method === 'GET' && url.pathname === '/admin/shops') return renderShopsManagement(req, res, db, {
+      q: url.searchParams.get('q') || '',
+      status: url.searchParams.get('status') || '',
+      plan: url.searchParams.get('plan') || ''
+    });
+    const superShopDetailMatch = url.pathname.match(/^\/admin\/shops\/([^/]+)$/);
+    if (req.method === 'GET' && superShopDetailMatch) return renderSuperShopDetail(req, res, db, superShopDetailMatch[1]);
+    if (req.method === 'POST' && superShopDetailMatch) return await updateSuperShop(req, res, superShopDetailMatch[1]);
     if (req.method === 'GET' && url.pathname === '/admin/orders') return renderOrdersManagement(req, res, db, url.searchParams.get('updated') === '1', Number.parseInt(url.searchParams.get('page') || '1', 10));
-    if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db, url.searchParams.get('date') || '', Number.parseInt(url.searchParams.get('page') || '1', 10));
+    if (req.method === 'GET' && url.pathname === '/admin/revenue') return renderRevenue(req, res, db, url.searchParams.get('date') || '', url.searchParams.get('range') || '', Number.parseInt(url.searchParams.get('page') || '1', 10));
     if (req.method === 'GET' && url.pathname === '/admin/subscription') return renderSubscriptionAdmin(req, res, db);
     if (req.method === 'GET' && url.pathname === '/admin/settings') return renderShopSettings(req, res, db, url.searchParams.get('updated') === '1');
     if (req.method === 'POST' && url.pathname === '/admin/settings') return await updateShopSettings(req, res);
@@ -425,7 +432,7 @@ function renderConfirmation(res, db, orderCode) {
 function renderAdmin(req, res, db) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
-  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [] }));
+  if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [], userEmail: user.email }));
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   send(res, 200, shopDashboard({ user, shop, orders }));
@@ -473,16 +480,16 @@ function notifyAdminDashboard(shopId) {
 }
 
 
-function renderRevenue(req, res, db, selectedDate = '', page = 1) {
+function renderRevenue(req, res, db, selectedDate = '', range = '', page = 1) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
   if (user.role === 'super_admin') {
-    return send(res, 200, revenuePage({ user, shops: db.shops, orders: db.orders, payments: db.payments || [], subscriptions: db.subscriptions || [], mode: 'subscriptions', selectedDate, page }));
+    return send(res, 200, revenuePage({ user, shops: db.shops, orders: db.orders, payments: db.payments || [], subscriptions: db.subscriptions || [], mode: 'subscriptions', selectedDate, range, page }));
   }
   const shop = db.shops.find((s) => s.id === user.shop_id);
   const orders = db.orders.filter((o) => o.shop_id === user.shop_id);
   const payments = (db.payments || []).filter((p) => p.shop_id === user.shop_id);
-  send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders', selectedDate, page }));
+  send(res, 200, revenuePage({ user, shop, orders, payments, subscriptions: [], mode: 'orders', selectedDate, range, page }));
 }
 
 function renderSubscriptionAdmin(req, res, db) {
@@ -628,10 +635,59 @@ async function updatePaperSize(req, res, paperSizeId) {
   redirect(res, '/admin/settings?updated=1');
 }
 
-function renderShopsManagement(req, res, db) {
+function renderShopsManagement(req, res, db, filters = {}) {
   const user = requireUser(req, db, 'super_admin');
   if (!user) return notFound(res);
-  send(res, 200, shopsManagementPage({ user, shops: db.shops, orders: db.orders }));
+  send(res, 200, shopsManagementPage({ user, shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [], filters }));
+}
+
+function renderSuperShopDetail(req, res, db, shopId) {
+  const user = requireUser(req, db, 'super_admin');
+  if (!user) return notFound(res);
+  const shop = db.shops.find((s) => s.id === shopId);
+  if (!shop) return notFound(res);
+  const orders = db.orders.filter((o) => o.shop_id === shop.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const subscriptions = db.subscriptions || [];
+  const search = new URL(req.url, `http://${req.headers.host}`).searchParams;
+  send(res, 200, superShopDetailPage({ user, shop, orders, subscriptions, created: search.get('created') === '1' || search.get('updated') === '1' }));
+}
+
+async function updateSuperShop(req, res, shopId) {
+  const form = await parseForm(req);
+  await tx(async (db) => {
+    const user = requireUser(req, db, 'super_admin');
+    if (!user) throw Object.assign(new Error('Not found'), { status: 404 });
+    const shop = db.shops.find((s) => s.id === shopId);
+    if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
+    const updatedAt = nowIso();
+    const name = String(form.name || '').trim();
+    const slug = String(form.slug || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const email = String(form.email || '').trim().toLowerCase();
+    const phone = String(form.phone || '').trim();
+    if (!name) throw Object.assign(new Error('Tenant name is required'), { status: 400 });
+    if (!slug) throw Object.assign(new Error('Slug is required'), { status: 400 });
+    if (db.shops.some((item) => item.slug === slug && item.id !== shop.id)) throw Object.assign(new Error('Slug already exists'), { status: 400 });
+    if (email && (db.users || []).some((item) => String(item.email).toLowerCase() === email && item.shop_id !== shop.id)) throw Object.assign(new Error('Email already exists'), { status: 400 });
+    shop.name = name;
+    shop.slug = slug;
+    shop.email = email || shop.email;
+    shop.phone = phone || shop.phone;
+    shop.plan = String(form.plan || shop.plan || 'pilot');
+    shop.subscription_status = String(form.subscription_status || shop.subscription_status || 'pilot_free');
+    shop.is_active = form.is_active !== '0';
+    shop.primary_color = normalizeHexColor(form.primary_color, shop.primary_color);
+    shop.description = String(form.description || '').trim() || shop.description;
+    shop.updated_at = updatedAt;
+    const owner = (db.users || []).find((item) => item.shop_id === shop.id && item.role === 'shop_admin');
+    if (owner) {
+      owner.name = `${name} Admin`;
+      owner.email = email || owner.email;
+      owner.updated_at = updatedAt;
+      if (String(form.password || '').trim()) owner.password = String(form.password).trim();
+    }
+    syncPickupSlotsForShop(db, shop);
+  });
+  redirect(res, `/admin/shops/${shopId}?updated=1`);
 }
 
 function renderOrdersManagement(req, res, db, updated = false, page = 1) {
