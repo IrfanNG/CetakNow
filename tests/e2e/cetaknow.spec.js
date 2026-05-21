@@ -164,7 +164,7 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
 
   await page.getByRole('button', { name: 'Simulate successful payment' }).click();
   await expect(page).toHaveURL(/\/subscriptions\/CN-SUB-1001\/confirmation/);
-  await expect(page.getByText('Sekarang setup page kedai anda.')).toBeVisible();
+  await expect(page.getByText('Sekarang, setup page kedai anda.')).toBeVisible();
   await page.fill('input[name="shop_name"]', 'Student Print Test');
   await expect(page.locator('input[name="slug"]')).toHaveValue('student-print-test');
   await expect(page.locator('input[name="operating_hours"]')).toHaveValue('Mon-Sat, 9:00 AM - 9:00 PM');
@@ -178,12 +178,12 @@ test('shop owner can subscribe and pay from pricing modal', async ({ page }) => 
   await page.locator('.open-time').fill('08:00');
   await page.locator('.close-time').fill('23:00');
   await expect(page.locator('input[name="operating_hours"]')).toHaveValue('Mon-Sun, 8:00 AM - 11:00 PM');
-  await expect(page.getByText('Email login:')).toBeVisible();
+  await expect(page.getByText('Email untuk log masuk')).toBeVisible();
   await page.fill('input[name="password"]', 'student123');
   await page.fill('input[name="password_confirm"]', 'student123');
-  await page.getByRole('button', { name: 'Jana Link Kedai' }).click();
+  await page.getByRole('button', { name: 'Simpan & Jana Link Kedai' }).click();
   await expect(page).toHaveURL(/\/subscriptions\/CN-SUB-1001\/confirmation/);
-  await expect(page.getByText('Link CetakNow kedai anda sudah dijana.')).toBeVisible();
+  await expect(page.getByText('Page kedai anda sudah siap')).toBeVisible();
   await expect(page.getByRole('link', { name: '/shop/student-print-test' })).toHaveAttribute('href', '/shop/student-print-test');
   await page.goto('/shop/student-print-test');
   await expect(page.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', 'https://maps.google.com/?q=student+print+test');

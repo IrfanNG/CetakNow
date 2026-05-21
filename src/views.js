@@ -1216,7 +1216,7 @@ function adminRowActions({ id, slug, active }) {
       <a href="/admin/shops/${escapeHtml(id)}#edit">Edit</a>
       <a href="/shop/${escapeHtml(slug)}" target="_blank" rel="noreferrer">Open Page</a>
       <form method="post" action="/admin/shops/${escapeHtml(id)}/status">
-        <button type="submit">${deactivateLabel}</button>
+        <button class="${active ? 'danger' : ''}" type="submit">${deactivateLabel}</button>
       </form>
     </div>
   </details>`;
@@ -1290,6 +1290,42 @@ function copyScript() {
             button.textContent = link;
           }
         });
+      });
+      const rowActionDetails = [...document.querySelectorAll('.row-actions')];
+      function placeRowActionMenu(details) {
+        const summary = details.querySelector('summary');
+        const menu = details.querySelector('.row-actions-menu');
+        if (!summary || !menu || !details.open) return;
+        const rect = summary.getBoundingClientRect();
+        const width = Math.min(190, Math.max(168, menu.offsetWidth || 176));
+        const viewportPadding = 12;
+        const left = Math.min(window.innerWidth - width - viewportPadding, Math.max(viewportPadding, rect.right - width));
+        const menuHeight = menu.offsetHeight || 160;
+        const opensUp = rect.bottom + 8 + menuHeight > window.innerHeight - viewportPadding;
+        const top = opensUp ? Math.max(viewportPadding, rect.top - menuHeight - 8) : rect.bottom + 8;
+        menu.style.setProperty('--row-menu-left', left + 'px');
+        menu.style.setProperty('--row-menu-top', top + 'px');
+        menu.style.setProperty('--row-menu-width', width + 'px');
+      }
+      rowActionDetails.forEach((details) => {
+        details.addEventListener('toggle', () => {
+          if (details.open) {
+            rowActionDetails.forEach((item) => {
+              if (item !== details) item.removeAttribute('open');
+            });
+            placeRowActionMenu(details);
+          }
+        });
+      });
+      window.addEventListener('resize', () => rowActionDetails.forEach(placeRowActionMenu));
+      window.addEventListener('scroll', () => rowActionDetails.forEach(placeRowActionMenu), true);
+      document.addEventListener('click', (event) => {
+        rowActionDetails.forEach((details) => {
+          if (details.open && !details.contains(event.target)) details.removeAttribute('open');
+        });
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') rowActionDetails.forEach((details) => details.removeAttribute('open'));
       });
     </script>`;
 }
@@ -1467,7 +1503,7 @@ export function shopSettingsPage({ user, shop, pricing = {}, products = [], pape
   </form>`).join('');
   const body = `${successBanner}<form class="admin-settings-form" method="post" action="/admin/settings">
     <section class="admin-panel settings-panel">
-      <div class="panel-head"><div><p class="eyebrow">Maklumat kedai</p><h2>Profil kedai</h2></div><span>Link dikunci: ${publicLink}</span></div>
+      <div class="panel-head"><div><p class="eyebrow">Maklumat kedai</p><h2>Profil kedai</h2></div><span class="settings-link-meta">Link dikunci: ${publicLink}</span></div>
       <div class="settings-grid">
         <label>Nama kedai <input required name="name" value="${escapeHtml(shop.name)}"></label>
         <label>Telefon kedai <input required name="phone" value="${escapeHtml(shop.phone)}" inputmode="tel"></label>
@@ -1476,10 +1512,10 @@ export function shopSettingsPage({ user, shop, pricing = {}, products = [], pape
         <label>Google Maps URL <input name="google_maps_url" type="url" value="${escapeHtml(shop.google_maps_url)}"></label>
         <label>Waktu operasi <input required name="operating_hours" value="${escapeHtml(shop.operating_hours)}"></label>
         <label>Warna utama <input required name="primary_color" type="color" value="${escapeHtml(shop.primary_color || '#062b66')}"></label>
-        <label>Link kedai <input readonly value="${publicLink}" aria-label="Public shop link"></label>
+        <label class="settings-readonly">Link kedai <input readonly value="${publicLink}" aria-label="Public shop link"></label>
       </div>
+      <div class="settings-actions"><button type="submit">Simpan Tetapan</button></div>
     </section>
-    <div class="settings-actions"><button type="submit">Simpan Tetapan</button></div>
   </form>
   <section class="admin-panel settings-panel product-manager">
     <div class="panel-head"><div><p class="eyebrow">Pricing</p><h2>Harga ikut saiz kertas</h2></div><span>Dipaparkan di page order</span></div>
@@ -1958,100 +1994,123 @@ export function mockSubscriptionPaymentPage(subscription) {
 
 export function subscriptionConfirmationPage(subscription, shop = null) {
   if (shop) {
+    const publicLink = `/shop/${escapeHtml(shop.slug)}`;
     return layout('Link kedai siap - CetakNow', `
-    <main class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-3xl mx-auto">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
-          <div class="bg-green-500 p-12 text-center text-white">
-            <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6">
+    <main class="setup-success-page min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div class="setup-success-wrap max-w-3xl mx-auto">
+        <div class="setup-success-card bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
+          <div class="setup-success-hero p-12 text-center">
+            <div class="setup-success-check w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <p class="text-sm font-black uppercase tracking-[0.2em] mb-2 opacity-80">Setup Berjaya</p>
-            <h1 class="text-3xl md:text-4xl font-black leading-tight">Link CetakNow kedai anda sudah dijana!</h1>
+            <p class="setup-success-badge text-sm font-black uppercase tracking-[0.2em] mb-2">Setup Berjaya</p>
+            <h1 class="text-3xl md:text-4xl font-black leading-tight">Page kedai anda sudah siap</h1>
+            <p class="setup-success-subtitle">
+              Link CetakNow anda telah dijana. Kongsi link ini di WhatsApp, bio media sosial, atau poster kedai untuk mula terima order print online.
+            </p>
           </div>
           
-          <div class="p-8 md:p-12 space-y-8">
-            <p class="text-center text-slate-600 font-medium text-lg">
-              Kongsi link ini di WhatsApp, bio media sosial, QR poster, atau mesej pelanggan untuk mula terima order.
-            </p>
-            
-            <div class="bg-slate-50 rounded-3xl p-8 border border-slate-100 space-y-4">
-              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+          <div class="setup-success-body p-8 md:p-12 space-y-8">
+            <div class="setup-summary-card bg-slate-50 rounded-3xl p-8 border border-slate-100 space-y-4">
+              <div class="setup-summary-row flex justify-between items-center border-b border-slate-200 pb-4">
                 <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Nama Kedai</span>
                 <span class="text-cn-deep font-black">${escapeHtml(shop.name)}</span>
               </div>
-              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div class="setup-summary-row setup-summary-link flex justify-between items-center border-b border-slate-200 pb-4">
                 <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Link Kedai</span>
-                <a href="/shop/${escapeHtml(shop.slug)}" class="text-cn-blue font-black underline hover:text-cn-navy transition-colors">/shop/${escapeHtml(shop.slug)}</a>
+                <span class="setup-link-actions">
+                  <a href="${publicLink}" class="text-cn-blue font-black underline hover:text-cn-navy transition-colors">${publicLink}</a>
+                  <button type="button" class="setup-copy-link" data-copy-link="${publicLink}">Salin Link Kedai</button>
+                </span>
               </div>
-              <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+              <div class="setup-summary-row flex justify-between items-center border-b border-slate-200 pb-4">
                 <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Pelan</span>
                 <span class="text-cn-deep font-black">${escapeHtml(subscription.plan_label)}</span>
               </div>
-              <div class="flex justify-between items-center">
+              <div class="setup-summary-row flex justify-between items-center">
                 <span class="text-slate-500 font-bold uppercase text-xs tracking-wider">Login Email</span>
                 <span class="text-cn-deep font-black">${escapeHtml(subscription.email)}</span>
               </div>
             </div>
             
-            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+            <div class="setup-success-actions flex flex-col sm:flex-row gap-4 pt-4">
               <a href="/login" class="flex-1 py-4 bg-cn-navy text-white text-center rounded-2xl font-black text-lg shadow-xl shadow-cn-navy/20 hover:scale-[1.02] active:scale-95 transition-all">Log Masuk Dashboard</a>
-              <a href="/shop/${escapeHtml(shop.slug)}" class="flex-1 py-4 bg-white text-cn-navy text-center border-2 border-slate-100 rounded-2xl font-black text-lg hover:bg-slate-50 transition-all">Buka Page Kedai</a>
+              <a href="${publicLink}" class="setup-secondary-action flex-1 py-4 bg-white text-cn-navy text-center border-2 border-slate-100 rounded-2xl font-black text-lg hover:bg-slate-50 transition-all">Buka Page Kedai</a>
             </div>
-            <a href="/" class="block text-center text-slate-400 font-bold hover:text-slate-600 transition-colors py-2">Kembali ke landing page</a>
+            <a href="/" class="setup-home-link block text-center text-slate-400 font-bold hover:text-slate-600 transition-colors py-2">Kembali ke laman utama</a>
           </div>
         </div>
       </div>
+      <script>
+        document.querySelectorAll('[data-copy-link]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const link = button.getAttribute('data-copy-link');
+            const fullLink = link.startsWith('http') ? link : location.origin + link;
+            try {
+              await navigator.clipboard.writeText(fullLink);
+              const previous = button.textContent;
+              button.textContent = 'Link disalin';
+              window.setTimeout(() => { button.textContent = previous; }, 1400);
+            } catch {
+              button.textContent = link;
+            }
+          });
+        });
+      </script>
     </main>`, shop.primary_color);
   }
 
   return layout('Setup kedai - CetakNow', `
-  <main class="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+  <main class="setup-onboarding min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto">
-      <div class="grid lg:grid-cols-[1fr_380px] gap-8">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
-          <div class="bg-cn-yellow p-10 md:p-12">
+      <div class="setup-onboarding-grid grid lg:grid-cols-[1fr_380px] gap-8">
+        <div class="setup-onboarding-card bg-white rounded-[2.5rem] shadow-2xl shadow-cn-navy/5 overflow-hidden border border-slate-100">
+          <div class="setup-success-head bg-cn-yellow p-10 md:p-12">
             <div class="flex items-center gap-4 mb-4">
-              <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-cn-deep">
+              <div class="setup-success-icon w-12 h-12 bg-white rounded-xl flex items-center justify-center text-cn-deep">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17 4 12"/></svg>
               </div>
               <p class="text-sm font-black uppercase tracking-[0.2em] text-cn-deep/80">Bayaran Berjaya</p>
             </div>
             <h1 class="text-3xl md:text-5xl font-black text-cn-deep leading-tight">Sekarang, setup page kedai anda.</h1>
             <p class="mt-6 text-cn-deep/70 font-bold text-lg leading-relaxed">
-              Isi maklumat minimum dahulu. Selepas hantar, CetakNow akan terus jana link kedai untuk pelanggan anda.
+              Isi maklumat minimum dahulu. Selepas dihantar, CetakNow akan jana link kedai untuk pelanggan anda.
             </p>
           </div>
           
-          <form class="p-8 md:p-12 space-y-10" method="post" action="/subscriptions/${escapeHtml(subscription.subscription_code)}/setup">
-            <div class="space-y-8">
-              <h2 class="text-2xl font-black text-cn-deep border-b-2 border-cn-yellow/30 pb-2 inline-block">Maklumat Kedai</h2>
+          <form class="setup-form p-8 md:p-12 space-y-10" method="post" action="/subscriptions/${escapeHtml(subscription.subscription_code)}/setup" novalidate>
+            <div class="setup-form-section space-y-8">
+              <h2 class="setup-section-title text-2xl font-black text-cn-deep border-b-2 border-cn-yellow/30 pb-2 inline-block">Maklumat Kedai</h2>
               
-              <div class="grid gap-6">
-                <div class="space-y-2">
+              <div class="setup-fields grid gap-6">
+                <div class="setup-field space-y-2">
                   <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Nama Kedai *</label>
                   <input required name="shop_name" autocomplete="organization" placeholder="Contoh: Student Print Seksyen 7"
                          class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                  <small class="setup-error" data-error-for="shop_name"></small>
                 </div>
                 
-                <div class="space-y-2">
-                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Slug Link Kedai *</label>
+                <div class="setup-field setup-link-field space-y-2">
+                  <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Link Kedai *</label>
                   <div class="relative">
                     <span class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold italic">/shop/</span>
                     <input required name="slug" pattern="[a-z0-9-]{3,64}" placeholder="nama-kedai"
                            class="w-full h-14 pl-20 pr-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
                   </div>
-                  <p class="text-[10px] text-slate-400 font-bold italic pl-2">Contoh: cetaknow.com/shop/<span class="slug-preview text-cn-blue not-italic">nama-kedai</span></p>
+                  <p class="setup-help text-[10px] text-slate-400 font-bold italic pl-2">Guna huruf kecil, nombor, dan dash sahaja. Contoh: qalam-irma</p>
+                  <p class="setup-help text-[10px] text-slate-400 font-bold italic pl-2">Preview: cetaknow.com/shop/<span class="slug-preview text-cn-blue not-italic">nama-kedai</span></p>
+                  <small class="setup-error" data-error-for="slug"></small>
                 </div>
                 
                 <div class="grid md:grid-cols-2 gap-6">
-                  <div class="space-y-2">
+                  <div class="setup-field space-y-2">
                     <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Telefon Kedai *</label>
-                    <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="60123456789"
+                    <input required name="phone" inputmode="tel" autocomplete="tel" value="${escapeHtml(subscription.phone)}" placeholder="0123456789"
                            class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                    <small class="setup-error" data-error-for="phone"></small>
                   </div>
                   
-                  <div class="space-y-2">
+                  <div class="setup-field space-y-2">
                     <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Operasi *</label>
                     <div class="relative">
                       <input type="hidden" name="operating_hours" value="Mon-Sat, 9:00 AM - 9:00 PM">
@@ -2061,16 +2120,19 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
                     </div>
+                    <p class="setup-help text-[10px] text-slate-400 font-bold italic pl-2">Contoh: Mon-Sat, 9:00 AM - 9:00 PM</p>
+                    <small class="setup-error" data-error-for="operating_hours"></small>
                   </div>
                 </div>
                 
-                <div class="space-y-2">
+                <div class="setup-field space-y-2">
                   <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Alamat / Kawasan *</label>
                   <textarea required name="address" placeholder="Dekat kampus, mall, taman..."
                             class="w-full p-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all min-height-[100px]"></textarea>
+                  <small class="setup-error" data-error-for="address"></small>
                 </div>
                 
-                <div class="space-y-2">
+                <div class="setup-field space-y-2">
                   <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Link Lokasi Kedai (Optional)</label>
                   <input name="google_maps_url" type="url" placeholder="https://maps.google.com/..."
                          class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
@@ -2078,37 +2140,41 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
               </div>
             </div>
             
-            <div class="space-y-8 pt-6">
-              <h2 class="text-2xl font-black text-cn-deep border-b-2 border-cn-blue/30 pb-2 inline-block">Akaun Dashboard</h2>
-              <div class="p-6 bg-cn-ice rounded-3xl border border-cn-blue/10 mb-6">
-                <p class="text-sm font-bold text-slate-600">Email Login: <span class="text-cn-deep font-black">${escapeHtml(subscription.email)}</span></p>
+            <div class="setup-form-section space-y-8 pt-6">
+              <h2 class="setup-section-title text-2xl font-black text-cn-deep border-b-2 border-cn-blue/30 pb-2 inline-block">Akaun Dashboard</h2>
+              <div class="setup-email-box p-6 bg-cn-ice rounded-3xl border border-cn-blue/10 mb-6">
+                <p class="setup-email-title text-sm font-black text-cn-blue uppercase tracking-widest">Email untuk log masuk</p>
+                <p class="setup-email-value text-cn-deep font-black">${escapeHtml(subscription.email)}</p>
+                <p class="setup-email-help text-sm font-bold text-slate-500">Email ini akan digunakan untuk akses dashboard kedai.</p>
               </div>
               
               <div class="grid md:grid-cols-2 gap-6">
-                <div class="space-y-2">
+                <div class="setup-field space-y-2">
                   <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Password Dashboard *</label>
                   <input required name="password" type="password" minlength="6" autocomplete="new-password" placeholder="••••••••"
                          class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                  <small class="setup-error" data-error-for="password"></small>
                 </div>
-                <div class="space-y-2">
+                <div class="setup-field space-y-2">
                   <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Sahkan Password *</label>
                   <input required name="password_confirm" type="password" minlength="6" autocomplete="new-password" placeholder="••••••••"
                          class="w-full h-14 px-5 rounded-2xl bg-slate-50 border-2 border-slate-100 focus:border-cn-blue focus:bg-white outline-none font-bold transition-all">
+                  <small class="setup-error" data-error-for="password_confirm"></small>
                 </div>
               </div>
             </div>
             
-            <div class="pt-8">
-              <button class="w-full py-5 bg-cn-blue text-white rounded-[1.5rem] font-black text-xl shadow-2xl shadow-cn-blue/20 hover:scale-[1.02] active:scale-95 transition-all">Jana Link Kedai</button>
-              <p class="mt-6 text-center text-slate-400 font-bold text-xs italic">
-                Harga print default dan slot pickup asas akan disediakan dahulu. Anda boleh kemas kini kemudian di dashboard.
+            <div class="setup-submit-block pt-8">
+              <button class="setup-submit w-full py-5 bg-cn-blue text-white rounded-[1.5rem] font-black text-xl shadow-2xl shadow-cn-blue/20 hover:scale-[1.02] active:scale-95 transition-all" disabled>Simpan & Jana Link Kedai</button>
+              <p class="setup-reassurance mt-6 text-center text-slate-400 font-bold text-xs italic">
+                Harga print default dan slot pickup asas akan disediakan. Anda boleh ubah tetapan ini dalam dashboard selepas page kedai dijana.
               </p>
             </div>
           </form>
         </div>
         
-        <aside class="space-y-8">
-          <div class="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-cn-navy/5">
+        <aside class="setup-sidebar space-y-8">
+          <div class="setup-side-card bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-cn-navy/5">
             <p class="text-xs font-black text-cn-blue uppercase tracking-widest mb-4">Ringkasan Pelan</p>
             <div class="flex justify-between items-end mb-6">
               <div>
@@ -2133,12 +2199,12 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
             </ul>
           </div>
           
-          <div class="p-8 bg-cn-navy rounded-[2rem] text-white overflow-hidden relative">
+          <div class="setup-side-card setup-preview-card p-8 bg-cn-navy rounded-[2rem] text-white overflow-hidden relative">
              <div class="relative z-10">
                <h4 class="font-black mb-2 italic text-cn-yellow uppercase tracking-widest text-xs">Preview Link</h4>
                <p class="text-lg font-black leading-tight mb-4">/shop/<span class="slug-preview">nama-kedai</span></p>
                <p class="text-sm text-white/60 font-medium leading-relaxed">
-                 Page ini akan terima PDF, kira harga, ambil bayaran online, dan simpan order dalam dashboard anda.
+                 Page ini akan digunakan pelanggan untuk upload PDF, pilih tetapan print, bayar online, dan pilih pickup.
                </p>
              </div>
              <div class="absolute -right-10 -bottom-10 opacity-10 scale-[2] -rotate-12 pointer-events-none">
@@ -2150,38 +2216,41 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
     </div>
 
     <!-- Hours Modal -->
-    <dialog id="hours-modal" class="p-0 rounded-3xl shadow-2xl backdrop:bg-cn-deep/60 backdrop:backdrop-blur-sm border-0">
-      <div class="w-full max-w-md bg-white">
-        <div class="p-8 bg-cn-blue text-white text-center">
+    <dialog id="hours-modal" class="hours-modal p-0 rounded-3xl shadow-2xl backdrop:bg-cn-deep/60 backdrop:backdrop-blur-sm border-0">
+      <div class="hours-modal-shell w-full max-w-md bg-white">
+        <div class="hours-modal-head p-8 bg-cn-blue text-white text-center">
+          <button type="button" class="hours-modal-close" onclick="document.getElementById('hours-modal').close()" aria-label="Tutup modal">×</button>
           <h3 class="text-2xl font-black">Waktu Operasi</h3>
           <p class="text-white/70 font-bold text-sm mt-1">Pilih hari dan masa kedai dibuka.</p>
         </div>
-        <div class="p-8 space-y-8">
-          <div class="space-y-4">
-            <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Hari Operasi</p>
-            <div class="flex flex-wrap gap-2">
+        <div class="hours-modal-body p-8 space-y-8">
+          <div class="hours-section space-y-4">
+            <p class="hours-label text-xs font-black text-slate-500 uppercase tracking-widest">Hari Operasi</p>
+            <div class="day-picker flex flex-wrap gap-2">
               ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => `
-                <label class="flex-1 min-w-[60px]">
+                <label class="day-chip flex-1 min-w-[60px]">
                   <input type="checkbox" value="${day}" ${day !== 'Sun' ? 'checked' : ''} class="peer hidden">
-                  <span class="block py-2 text-center rounded-xl bg-slate-50 border-2 border-slate-100 text-slate-400 font-bold text-xs peer-checked:bg-cn-ice peer-checked:border-cn-blue peer-checked:text-cn-blue cursor-pointer transition-all">${day}</span>
+                  <span>${day}</span>
                 </label>
               `).join('')}
             </div>
           </div>
           
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Buka</label>
+          <div class="hours-time-grid grid grid-cols-2 gap-4">
+            <div class="hours-time-field space-y-2">
+              <label class="hours-label block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Buka</label>
               <input type="time" class="open-time w-full h-12 px-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-bold" value="09:00">
             </div>
-            <div class="space-y-2">
-              <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Tutup</label>
+            <div class="hours-time-field space-y-2">
+              <label class="hours-label block text-xs font-black text-slate-500 uppercase tracking-widest">Waktu Tutup</label>
               <input type="time" class="close-time w-full h-12 px-4 rounded-xl bg-slate-50 border-2 border-slate-100 font-bold" value="21:00">
             </div>
           </div>
           
+          <div class="hours-modal-footer">
           <button type="button" onclick="document.getElementById('hours-modal').close()" 
-                  class="w-full py-4 bg-cn-navy text-white rounded-2xl font-black text-lg shadow-xl shadow-cn-navy/20">Selesai</button>
+                  class="hours-done w-full py-4 bg-cn-navy text-white rounded-2xl font-black text-lg shadow-xl shadow-cn-navy/20">Selesai</button>
+          </div>
         </div>
       </div>
     </dialog>
@@ -2195,6 +2264,9 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
       const dayInputs = [...document.querySelectorAll('#hours-modal input[type="checkbox"]')];
       const openTime = document.querySelector('.open-time');
       const closeTime = document.querySelector('.close-time');
+      const setupForm = document.querySelector('.setup-form');
+      const submitButton = document.querySelector('.setup-submit');
+      const errorNodes = document.querySelectorAll('[data-error-for]');
       let slugTouched = false;
       function toSlug(value) {
         return String(value || '').toLowerCase().trim().replace(/['"]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
@@ -2202,6 +2274,40 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
       function syncSlugPreview() {
         const slug = toSlug(slugInput?.value) || 'nama-kedai';
         previews.forEach((preview) => preview.textContent = slug);
+      }
+      function field(name) {
+        return setupForm?.querySelector('[name="' + name + '"]');
+      }
+      function setError(name, message = '') {
+        const input = field(name);
+        const error = setupForm?.querySelector('[data-error-for="' + name + '"]');
+        if (error) error.textContent = message;
+        input?.classList.toggle('setup-invalid', Boolean(message));
+      }
+      function validateSetup(showErrors = false) {
+        const values = {
+          shop_name: field('shop_name')?.value.trim() || '',
+          slug: toSlug(field('slug')?.value || ''),
+          phone: field('phone')?.value.trim() || '',
+          operating_hours: field('operating_hours')?.value.trim() || '',
+          address: field('address')?.value.trim() || '',
+          password: field('password')?.value || '',
+          password_confirm: field('password_confirm')?.value || ''
+        };
+        const errors = {};
+        if (!values.shop_name) errors.shop_name = 'Masukkan nama kedai.';
+        if (!values.slug || values.slug.length < 3) errors.slug = 'Masukkan link kedai sekurang-kurangnya 3 aksara.';
+        if (!/^[a-z0-9-]+$/.test(values.slug)) errors.slug = 'Guna huruf kecil, nombor, dan dash sahaja.';
+        if (!/^[0-9+ -]{9,16}$/.test(values.phone)) errors.phone = 'Masukkan nombor telefon yang sah.';
+        if (!values.operating_hours || values.operating_hours.startsWith('Hari belum dipilih')) errors.operating_hours = 'Pilih hari dan waktu operasi.';
+        if (!values.address) errors.address = 'Masukkan alamat atau kawasan kedai.';
+        if (values.password.length < 6) errors.password = 'Password mesti sekurang-kurangnya 6 aksara.';
+        if (!values.password_confirm || values.password_confirm !== values.password) errors.password_confirm = 'Password tidak sama.';
+        if (showErrors) {
+          errorNodes.forEach((node) => setError(node.dataset.errorFor, errors[node.dataset.errorFor] || ''));
+        }
+        if (submitButton) submitButton.disabled = Object.keys(errors).length > 0;
+        return errors;
       }
       function formatTime(value) {
         const [hourRaw, minute = '00'] = String(value || '').split(':');
@@ -2225,21 +2331,40 @@ export function subscriptionConfirmationPage(subscription, shop = null) {
         const value = dayLabel + ', ' + start + ' - ' + end;
         if (operatingInput) operatingInput.value = value;
         if (operatingPreview) operatingPreview.textContent = value;
+        validateSetup(false);
       }
       shopNameInput?.addEventListener('input', () => {
         if (!slugTouched && slugInput) slugInput.value = toSlug(shopNameInput.value);
         syncSlugPreview();
+        validateSetup(false);
       });
       slugInput?.addEventListener('input', () => {
         slugTouched = true;
         slugInput.value = toSlug(slugInput.value);
         syncSlugPreview();
+        validateSetup(false);
+      });
+      setupForm?.querySelectorAll('input, textarea').forEach((input) => {
+        input.addEventListener('input', () => validateSetup(false));
+      });
+      setupForm?.addEventListener('submit', (event) => {
+        const errors = validateSetup(true);
+        if (Object.keys(errors).length) {
+          event.preventDefault();
+          setupForm.querySelector('.setup-invalid')?.focus();
+          return;
+        }
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Menjana...';
+        }
       });
       dayInputs.forEach((input) => input.addEventListener('change', syncOperatingHours));
       openTime?.addEventListener('input', syncOperatingHours);
       closeTime?.addEventListener('input', syncOperatingHours);
       syncSlugPreview();
       syncOperatingHours();
+      validateSetup(false);
     </script>
   </main>`);
 }
