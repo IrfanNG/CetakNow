@@ -7,7 +7,7 @@ const { Pool } = pg;
 const DATA_PATH = path.resolve('data/db.json');
 const SEED_PATH = path.resolve('data/seed.json');
 
-const LOCAL_ONLY_KEYS = ['orders', 'payments', 'notifications', 'subscription_leads'];
+const LOCAL_ONLY_KEYS = ['subscription_leads'];
 
 let pool;
 let loggedMode = false;
@@ -96,7 +96,7 @@ export async function readDb() {
 
 export async function writeDb(db) {
   if (databaseMode() === 'postgres') {
-    await persistPhase3Tables(db);
+    await persistAllTables(db);
     await writeLocalOnlyTables(db);
     return;
   }
@@ -162,10 +162,12 @@ async function writeLocalDb(db) {
 }
 
 async function readMixedDb() {
-  // Temporary Phase 3 mixed persistence layer:
-  // - PostgreSQL is the source for tenant/account/shop settings tables.
-  // - Local JSON remains the source for orders, files, payments, notifications,
-  //   and cleanup state until Phase 4 migrates those areas.
+  // Phase 4 mixed persistence layer:
+  // - PostgreSQL is the source for all operational tables (shops, users,
+  //   subscriptions, pricing, paper sizes, addons, pickup slots, payment
+  //   settings, orders, order files, order print settings, payments,
+  //   notifications).
+  // - Local JSON remains only for subscription_leads.
   // Keep this compatibility object shaped like the old JSON database so existing
   // routes and UI can stay stable while persistence is migrated safely by phase.
   const localDb = await readLocalDb();
@@ -177,7 +179,12 @@ async function readMixedDb() {
     paperSizes,
     addons,
     pickupSlots,
-    paymentSettings
+    paymentSettings,
+    orders,
+    orderFiles,
+    printSettings,
+    payments,
+    notifications
   ] = await Promise.all([
     queryRows('SELECT * FROM shops ORDER BY created_at ASC, id ASC'),
     queryRows('SELECT * FROM users ORDER BY created_at ASC, id ASC'),
@@ -186,7 +193,12 @@ async function readMixedDb() {
     queryRows('SELECT * FROM shop_paper_sizes ORDER BY sort_order ASC, created_at ASC, id ASC'),
     queryRows('SELECT * FROM addons ORDER BY created_at DESC, id ASC'),
     queryRows('SELECT * FROM pickup_slots ORDER BY day_of_week ASC, start_time ASC, id ASC'),
-    queryRows('SELECT * FROM shop_payment_settings ORDER BY created_at ASC, id ASC')
+    queryRows('SELECT * FROM shop_payment_settings ORDER BY created_at ASC, id ASC'),
+    queryRows('SELECT * FROM orders ORDER BY created_at ASC, id ASC'),
+    queryRows('SELECT * FROM order_files ORDER BY created_at ASC, id ASC'),
+    queryRows('SELECT * FROM order_print_settings ORDER BY created_at ASC, id ASC'),
+    queryRows('SELECT * FROM payments ORDER BY created_at ASC, id ASC'),
+    queryRows('SELECT * FROM notifications ORDER BY created_at ASC, id ASC')
   ]);
 
   return {
@@ -198,7 +210,10 @@ async function readMixedDb() {
     shop_paper_sizes: normalizeRows(paperSizes, ['bw_price_per_page', 'color_price_per_page', 'sort_order']),
     shop_products: normalizeRows(addons, ['price']),
     pickup_slots: normalizeRows(pickupSlots, ['day_of_week', 'max_orders']),
-    shop_payment_settings: normalizeRows(paymentSettings)
+    shop_payment_settings: normalizeRows(paymentSettings),
+    orders: reconstructOrders(orders, orderFiles, printSettings),
+    payments: normalizeRows(payments, ['amount']),
+    notifications: normalizeRows(notifications)
   };
 }
 
@@ -222,11 +237,66 @@ function normalizeValue(key, value, numericSet) {
   return value;
 }
 
-async function persistPhase3Tables(db) {
-  // Phase 3 persists only tenant/account/shop settings tables. Do not persist
-  // orders, order files, order print settings, payments, notifications, or
-  // cleanup state here; those remain local JSON until Phase 4.
+function reconstructOrders(orders, orderFiles, printSettings) {
+  // Joins normalized PG rows from orders + order_files + order_print_settings
+  // back into the combined flat shape that existing routes/views expect.
+  // Also normalizes PostgreSQL Date objects to ISO strings so the rest of
+  // the app (which expects strings) works without localeCompare crashes.
+  const filesByOrder = {};
+  for (const file of orderFiles || []) {
+    (filesByOrder[file.order_id] ||= []).push(file);
+  }
+  const settingsByOrder = {};
+  for (const s of printSettings || []) {
+    settingsByOrder[s.order_id] = s;
+  }
+
+  return (orders || []).map((order) => {
+    const files = filesByOrder[order.id] || [];
+    const settings = settingsByOrder[order.id] || {};
+    const firstFile = files[0] || {};
+
+    // Normalize Date objects from PostgreSQL to ISO strings.
+    // TIMESTAMPTZ columns arrive as JS Date; this avoids localeCompare crashes.
+    const createdAt = order.created_at instanceof Date ? order.created_at.toISOString() : (order.created_at || nowIso());
+    const updatedAt = order.updated_at instanceof Date ? order.updated_at.toISOString() : (order.updated_at || nowIso());
+    // DATE columns arrive as midnight-UTC Date; .toISOString().slice(0,10)
+    // yields the correct YYYY-MM-DD in UTC, avoiding timezone shifts.
+    const pickupDate = order.pickup_date instanceof Date ? order.pickup_date.toISOString().slice(0, 10) : (order.pickup_date || '');
+
+    return {
+      ...order,
+      created_at: createdAt,
+      updated_at: updatedAt,
+      pickup_date: pickupDate,
+      files: files.map((f) => ({
+        original_file_name: f.original_file_name,
+        file_path: f.file_path,
+        page_count: f.page_count
+      })),
+      file_path: firstFile.file_path || '',
+      original_file_name: firstFile.original_file_name || '',
+      page_count: files.reduce((sum, f) => sum + (f.page_count || 0), 0),
+      paper_size_id: settings.paper_size_id || null,
+      paper_size: settings.paper_size || 'A4',
+      print_type: settings.print_type || 'bw',
+      sides: settings.sides || 'single',
+      copies: Number(settings.copies || 1),
+      subtotal: Number(settings.subtotal || 0),
+      product_total: Number(settings.product_total || 0),
+      product_items: settings.product_items || [],
+      file_delete_at: firstFile.delete_at ? new Date(firstFile.delete_at).toISOString() : null,
+      file_deleted_at: firstFile.deleted_at ? new Date(firstFile.deleted_at).toISOString() : null
+    };
+  });
+}
+
+async function persistAllTables(db) {
+  // Phase 4 persists all operational tables to PostgreSQL: tenant/shop settings
+  // (Phase 3) plus orders, order files, print settings, payments, and
+  // notifications (Phase 4). Cleanup state (file deleted_at) is included.
   await withPgTransaction(async (client) => {
+    // Phase 3 — tenant/account/shop settings
     for (const shop of db.shops || []) await upsertShop(client, shop);
     for (const user of db.users || []) await upsertUser(client, user);
     for (const subscription of db.subscriptions || []) await upsertSubscription(client, subscription);
@@ -235,6 +305,14 @@ async function persistPhase3Tables(db) {
     for (const product of db.shop_products || []) await upsertAddon(client, product);
     for (const slot of db.pickup_slots || []) await upsertPickupSlot(client, slot);
     for (const settings of db.shop_payment_settings || []) await upsertPaymentSettings(client, settings);
+    // Phase 4 — orders, files, print settings, payments, notifications
+    for (const order of db.orders || []) {
+      await upsertOrder(client, order);
+      await upsertOrderPrintSettings(client, order);
+      await upsertOrderFiles(client, order);
+    }
+    for (const payment of db.payments || []) await upsertPayment(client, payment);
+    for (const notification of db.notifications || []) await upsertNotification(client, notification);
   });
 }
 
@@ -376,6 +454,105 @@ async function upsertPaymentSettings(client, settings) {
   `, [settings.id, settings.shop_id, settings.gateway_type || 'billplz_mock', settings.api_key || '', settings.collection_id || '', settings.x_signature_key || '', settings.is_enabled ?? true, timestamp(settings.created_at), timestamp(settings.updated_at)]);
 }
 
+async function upsertOrder(client, order) {
+  await client.query(`
+    INSERT INTO orders (id, shop_id, order_code, customer_name, customer_phone, customer_email, notes, payment_status, order_status, pickup_date, pickup_slot_id, total_amount, minimum_order_amount, payment_reference, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+    ON CONFLICT (id) DO UPDATE SET
+      shop_id = EXCLUDED.shop_id,
+      order_code = EXCLUDED.order_code,
+      customer_name = EXCLUDED.customer_name,
+      customer_phone = EXCLUDED.customer_phone,
+      customer_email = EXCLUDED.customer_email,
+      notes = EXCLUDED.notes,
+      payment_status = EXCLUDED.payment_status,
+      order_status = EXCLUDED.order_status,
+      pickup_date = EXCLUDED.pickup_date,
+      pickup_slot_id = EXCLUDED.pickup_slot_id,
+      total_amount = EXCLUDED.total_amount,
+      minimum_order_amount = EXCLUDED.minimum_order_amount,
+      payment_reference = EXCLUDED.payment_reference,
+      updated_at = EXCLUDED.updated_at
+  `, [order.id, order.shop_id, order.order_code, order.customer_name || '', order.customer_phone || '', order.customer_email || '', order.notes || '', order.payment_status || 'pending', order.order_status || 'Pending Payment', order.pickup_date || null, order.pickup_slot_id || null, money(order.total_amount), money(order.minimum_order_amount), order.payment_reference || null, timestamp(order.created_at), timestamp(order.updated_at)]);
+}
+
+async function upsertOrderPrintSettings(client, order) {
+  await client.query(`
+    INSERT INTO order_print_settings (id, order_id, paper_size_id, paper_size, print_type, sides, copies, subtotal, product_total, product_items, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    ON CONFLICT (order_id) DO UPDATE SET
+      paper_size_id = EXCLUDED.paper_size_id,
+      paper_size = EXCLUDED.paper_size,
+      print_type = EXCLUDED.print_type,
+      sides = EXCLUDED.sides,
+      copies = EXCLUDED.copies,
+      subtotal = EXCLUDED.subtotal,
+      product_total = EXCLUDED.product_total,
+      product_items = EXCLUDED.product_items,
+      updated_at = EXCLUDED.updated_at
+  `, [id('print_settings'), order.id, order.paper_size_id || null, order.paper_size || 'A4', order.print_type || 'bw', order.sides || 'single', number(order.copies || 1), money(order.subtotal), money(order.product_total), JSON.stringify(order.product_items || []), timestamp(order.created_at), timestamp(order.updated_at)]);
+}
+
+async function upsertOrderFiles(client, order) {
+  // Collect files from the combined order object. Does NOT delete physical PDFs;
+  // only replaces metadata rows in order_files.
+  const files = order.files?.length > 0
+    ? order.files
+    : (order.file_path
+        ? [{ original_file_name: order.original_file_name, file_path: order.file_path, page_count: order.page_count || 1 }]
+        : []);
+  if (!files.length) return;
+  // Delete existing metadata rows for this order, then insert fresh.
+  await client.query('DELETE FROM order_files WHERE order_id = $1', [order.id]);
+  for (const file of files) {
+    await client.query(`
+      INSERT INTO order_files (id, order_id, original_file_name, file_path, page_count, delete_at, deleted_at, created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    `, [
+      id('file'),
+      order.id,
+      file.original_file_name || 'document.pdf',
+      file.file_path || '',
+      number(file.page_count || 0),
+      order.file_delete_at || null,
+      order.file_deleted_at || null,
+      timestamp(order.created_at)
+    ]);
+  }
+}
+
+async function upsertPayment(client, payment) {
+  await client.query(`
+    INSERT INTO payments (id, order_id, subscription_id, shop_id, gateway_type, gateway_reference, amount, status, paid_at, raw_response, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    ON CONFLICT (id) DO UPDATE SET
+      order_id = EXCLUDED.order_id,
+      subscription_id = EXCLUDED.subscription_id,
+      shop_id = EXCLUDED.shop_id,
+      gateway_type = EXCLUDED.gateway_type,
+      gateway_reference = EXCLUDED.gateway_reference,
+      amount = EXCLUDED.amount,
+      status = EXCLUDED.status,
+      paid_at = EXCLUDED.paid_at,
+      raw_response = EXCLUDED.raw_response,
+      updated_at = EXCLUDED.updated_at
+  `, [payment.id, payment.order_id || null, payment.subscription_id || null, payment.shop_id || null, payment.gateway_type || 'billplz_mock', payment.gateway_reference, money(payment.amount), payment.status || 'pending', payment.paid_at || null, JSON.stringify(payment.raw_response || {}), timestamp(payment.created_at), timestamp(payment.updated_at)]);
+}
+
+async function upsertNotification(client, notification) {
+  await client.query(`
+    INSERT INTO notifications (id, shop_id, order_id, type, recipient, status, sent_at, created_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    ON CONFLICT (id) DO UPDATE SET
+      shop_id = EXCLUDED.shop_id,
+      order_id = EXCLUDED.order_id,
+      type = EXCLUDED.type,
+      recipient = EXCLUDED.recipient,
+      status = EXCLUDED.status,
+      sent_at = EXCLUDED.sent_at
+  `, [notification.id, notification.shop_id || null, notification.order_id || null, notification.type || 'email', notification.recipient || '', notification.status || 'sent', notification.sent_at || null, timestamp(notification.created_at)]);
+}
+
 function timestamp(value) {
   return value || nowIso();
 }
@@ -396,4 +573,19 @@ export function nowIso() {
 
 export function id(prefix) {
   return `${prefix}_${crypto.randomUUID()}`;
+}
+
+export function timeValue(value) {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+export function sortByNewest(a, b, field = 'created_at') {
+  return timeValue(b[field]) - timeValue(a[field]);
+}
+
+export function sortByOldest(a, b, field = 'created_at') {
+  return timeValue(a[field]) - timeValue(b[field]);
 }

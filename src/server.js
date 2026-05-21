@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { readDb, tx, id, nowIso, ensureDb, logDatabaseMode } from './db.js';
+import { readDb, tx, id, nowIso, ensureDb, logDatabaseMode, sortByNewest, databaseModeLabel } from './db.js';
 import { json, parseForm, parseMultipart, redirect, send, staticFile } from './http-utils.js';
 import { loginUser, logoutUser, requireUser } from './auth.js';
 import { detectPdfPageCount, isPdfFilename } from './pdf.js';
@@ -17,10 +17,13 @@ const MAX_PDF_FILES = 10;
 const adminEventClients = new Map();
 const superAdminEventClients = new Set();
 
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || 'storage/pdfs');
+
 export async function app(req, res) {
   try {
     if (req.method === 'GET' && req.url.startsWith('/public/')) return (await staticFile(req, res)) || notFound(res);
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (req.method === 'GET' && url.pathname === '/health') { json(res, 200, { ok: true, mode: databaseModeLabel(), uptime: process.uptime() }); return; }
     const db = await readDb();
 
     if (req.method === 'GET' && url.pathname === '/') return send(res, 200, landingPage({ leadCount: db.subscription_leads?.length || 0 }));
@@ -380,10 +383,10 @@ async function createOrder(req, res, slug, origin) {
     const availability = isSlotAvailable({ db, shopId: shop.id, slotId: fields.pickup_slot_id, pickupDate: fields.pickup_date });
     if (!availability.ok) throw Object.assign(new Error(availability.reason), { status: 400 });
     const orderCode = nextOrderCode(db, shop);
-    await fs.mkdir('storage/pdfs', { recursive: true });
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
     const savedFiles = [];
     for (const [index, detail] of uploadDetails.entries()) {
-      const filePath = path.resolve('storage/pdfs', `${orderCode}-${String(index + 1).padStart(2, '0')}-${detail.originalName}`);
+      const filePath = path.resolve(UPLOAD_DIR, `${orderCode}-${String(index + 1).padStart(2, '0')}-${detail.originalName}`);
       await fs.writeFile(filePath, detail.file.value);
       savedFiles.push({ original_file_name: detail.originalName, file_path: filePath, page_count: detail.pageCount });
     }
@@ -442,13 +445,13 @@ function renderAdmin(req, res, db) {
   if (!user) return redirect(res, '/login');
   if (user.role === 'super_admin') return send(res, 200, superDashboard({ shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [], userEmail: user.email }));
   const shop = db.shops.find((s) => s.id === user.shop_id);
-  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => sortByNewest(a, b, 'created_at'));
   send(res, 200, shopDashboard({ user, shop, orders }));
 }
 
 function shopDashboardData(db, user) {
   const shop = db.shops.find((s) => s.id === user.shop_id);
-  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => sortByNewest(a, b, 'created_at'));
   return { shop, orders };
 }
 
@@ -519,7 +522,7 @@ function renderSubscriptionAdmin(req, res, db) {
   if (!shop) return notFound(res);
   const subscription = (db.subscriptions || [])
     .filter((s) => s.shop_id === shop.id)
-    .sort((a, b) => String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')))[0] || null;
+    .sort((a, b) => sortByNewest(a, b, 'updated_at') || sortByNewest(a, b, 'created_at'))[0] || null;
   const payment = subscription ? (db.payments || []).find((p) => p.subscription_id === subscription.id) : null;
   send(res, 200, subscriptionPage({ user, shop, subscription, payment }));
 }
@@ -531,7 +534,7 @@ function renderShopSettings(req, res, db, updated = false) {
   const shop = db.shops.find((s) => s.id === user.shop_id);
   if (!shop) return notFound(res);
   const pricing = (db.shop_pricing || []).find((p) => p.shop_id === shop.id);
-  const products = (db.shop_products || []).filter((p) => p.shop_id === shop.id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const products = (db.shop_products || []).filter((p) => p.shop_id === shop.id).sort((a, b) => sortByNewest(a, b, 'created_at'));
   const paperSizes = allPaperSizes(db, shop, pricing);
   send(res, 200, shopSettingsPage({ user, shop, pricing, products, paperSizes, updated }));
 }
@@ -665,7 +668,7 @@ function renderSuperShopDetail(req, res, db, shopId) {
   if (!user) return notFound(res);
   const shop = db.shops.find((s) => s.id === shopId);
   if (!shop) return notFound(res);
-  const orders = db.orders.filter((o) => o.shop_id === shop.id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const orders = db.orders.filter((o) => o.shop_id === shop.id).sort((a, b) => sortByNewest(a, b, 'created_at'));
   const subscriptions = db.subscriptions || [];
   const search = new URL(req.url, `http://${req.headers.host}`).searchParams;
   send(res, 200, superShopDetailPage({ user, shop, orders, subscriptions, created: search.get('created') === '1' || search.get('updated') === '1' }));
@@ -716,11 +719,11 @@ function renderOrdersManagement(req, res, db, updated = false, page = 1) {
   const user = requireUser(req, db);
   if (!user) return redirect(res, '/login');
   if (user.role === 'super_admin') {
-    const orders = [...db.orders].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const orders = [...db.orders].sort((a, b) => sortByNewest(a, b, 'created_at'));
     return send(res, 200, ordersManagementPage({ user, shops: db.shops, orders, updated, page }));
   }
   const shop = db.shops.find((s) => s.id === user.shop_id);
-  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const orders = db.orders.filter((o) => o.shop_id === user.shop_id).sort((a, b) => sortByNewest(a, b, 'created_at'));
   send(res, 200, ordersManagementPage({ user, shop, orders, updated, page }));
 }
 
@@ -835,6 +838,7 @@ function ensureDefaultPaperSize(db, shop, pricing = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   logDatabaseMode();
   await ensureDb();
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const port = Number(process.env.PORT || 3000);
   const host = process.env.HOST || '127.0.0.1';
   http.createServer(app).listen(port, host, () => console.log(`CetakNow running at http://${host}:${port}`));
