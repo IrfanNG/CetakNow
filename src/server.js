@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { readDb, tx, id, nowIso, ensureDb } from './db.js';
+import { readDb, tx, id, nowIso, ensureDb, logDatabaseMode } from './db.js';
 import { json, parseForm, parseMultipart, redirect, send, staticFile } from './http-utils.js';
 import { loginUser, logoutUser, requireUser } from './auth.js';
 import { detectPdfPageCount, isPdfFilename } from './pdf.js';
@@ -833,6 +833,7 @@ function ensureDefaultPaperSize(db, shop, pricing = {}) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  logDatabaseMode();
   await ensureDb();
   const port = Number(process.env.PORT || 3000);
   const host = process.env.HOST || '127.0.0.1';

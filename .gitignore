@@ -1,9 +1,14 @@
 .DS_Store
 .env
+*.log
 node_modules/
 data/*.json
 !data/seed.json
+storage/*
+!storage/.gitkeep
+!storage/pdfs/
 storage/pdfs/*
 !storage/pdfs/.gitkeep
+uploads/
 playwright-report/
 test-results/
