@@ -790,7 +790,7 @@ export function shopPage({ shop, pricing, slots, products = [], paperSizes = [],
   const paperSizeOptions = activePaperSizes.map((size, index) => `<option value="${escapeHtml(size.id)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(size.label)}</option>`).join('');
   const firstPaperSize = activePaperSizes[0];
   const productOptions = products.map((product) => `<label class="product-option"><input type="checkbox" name="product_ids" value="${escapeHtml(product.id)}"><span><b>${escapeHtml(product.name)}</b>${product.description ? `<small>${escapeHtml(product.description)}</small>` : ''}</span><strong>${formatMoney(product.price)}</strong></label>`).join('');
-  const productSection = productOptions ? `<section class="product-addons"><p class="eyebrow">Add-on optional</p><h3>Tambah produk servis</h3><div class="product-options">${productOptions}</div></section>` : '';
+  const productSection = productOptions ? `<section class="form-group product-addons"><div class="group-head"><p class="eyebrow">Add-on optional</p><h3>Tambah produk servis</h3></div><div class="product-options">${productOptions}</div></section>` : '';
   return layout(`${shop.name} Online Print`, `
   <main class="shop-order-page">
     <section class="shop-hero-panel">
@@ -805,15 +805,23 @@ export function shopPage({ shop, pricing, slots, products = [], paperSizes = [],
     <section class="shop-order-grid">
       <form class="shop-order-card" action="/shop/${shop.slug}/orders" method="post" enctype="multipart/form-data">
         <div class="form-head"><p class="eyebrow">Order form</p><h2>Tempah Print Online</h2></div>
-        <div class="field-block"><label>PDF file(s) <input required multiple type="file" name="pdf" accept="application/pdf,.pdf"></label></div>
-        <div class="two"><label>Paper size <select name="paper_size_id">${paperSizeOptions}</select></label><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(firstPaperSize.bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(firstPaperSize.color_price_per_page)}/page)</option></select></label></div>
-        <label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label>
-        <label>Copies <input required type="number" name="copies" min="1" value="1"></label>
+        <section class="form-group">
+          <div class="group-head"><p class="eyebrow">Upload & print settings</p><h3>Fail dan pilihan cetakan</h3></div>
+          <div class="field-block"><label>PDF file(s) <input required multiple type="file" name="pdf" accept="application/pdf,.pdf"><small>PDF sahaja. Pastikan fail akhir yang ingin dicetak.</small></label></div>
+          <div class="two"><label>Paper size <select name="paper_size_id">${paperSizeOptions}</select></label><label>Print type <select name="print_type"><option value="bw">Black & White (${formatMoney(firstPaperSize.bw_price_per_page)}/page)</option><option value="color">Color (${formatMoney(firstPaperSize.color_price_per_page)}/page)</option></select></label></div>
+          <div class="two"><label>Sides <select name="sides"><option value="single">Single-sided</option><option value="double">Double-sided</option></select></label><label>Copies <input required type="number" name="copies" min="1" value="1"></label></div>
+        </section>
         ${productSection}
-        <div class="two"><label>Pickup date <input required type="date" name="pickup_date"></label><label>Pickup slot <select name="pickup_slot_id">${firstSlot}</select></label></div>
-        <div class="two"><label>Name <input required name="customer_name" autocomplete="name"></label><label>Phone <input required name="customer_phone" placeholder="60123456789"></label></div>
-        <label>Email optional <input type="email" name="customer_email"></label>
-        <label>Notes optional <textarea name="notes" placeholder="Extra instruction"></textarea></label>
+        <section class="form-group">
+          <div class="group-head"><p class="eyebrow">Pickup information</p><h3>Masa ambil pesanan</h3></div>
+          <div class="two"><label>Pickup date <input required type="date" name="pickup_date"></label><label>Pickup slot <select name="pickup_slot_id">${firstSlot}</select></label></div>
+        </section>
+        <section class="form-group">
+          <div class="group-head"><p class="eyebrow">Customer information</p><h3>Maklumat pelanggan</h3></div>
+          <div class="two"><label>Name <input required name="customer_name" autocomplete="name"></label><label>Phone <input required name="customer_phone" placeholder="60123456789"></label></div>
+          <label>Email optional <input type="email" name="customer_email"></label>
+          <label>Notes optional <textarea name="notes" placeholder="Extra instruction"></textarea></label>
+        </section>
         <label class="check shop-policy"><input required type="checkbox" name="policy_agreed" value="yes"><span>Minimum pesanan print online ialah ${formatMoney(shop.minimum_order_amount)}. Semua pesanan perlu dibayar sebelum diproses. Fail dipadam selepas 7 hari.</span></label>
         <button class="shop-submit">Teruskan ke Pembayaran</button>
       </form>
@@ -1328,6 +1336,74 @@ function storyBand(title, subtitle, stats = [], cta = '', actions = []) {
   </section>`;
 }
 
+function dashboardLiveScript() {
+  return `<script>
+      (() => {
+        let dashboardPoll = null;
+        let refreshingDashboard = false;
+        function bindCopyButtons() {
+          document.querySelectorAll('[data-copy-link]:not([data-dashboard-copy-ready])').forEach((button) => {
+            button.setAttribute('data-dashboard-copy-ready', '1');
+            button.addEventListener('click', async () => {
+              const link = button.getAttribute('data-copy-link');
+              const fullLink = link.startsWith('http') ? link : location.origin + link;
+              try {
+                await navigator.clipboard.writeText(fullLink);
+                const previous = button.textContent;
+                button.textContent = 'Copied';
+                window.setTimeout(() => { button.textContent = previous; }, 1200);
+              } catch {
+                button.textContent = link;
+              }
+            });
+          });
+        }
+        async function refreshDashboard() {
+          if (refreshingDashboard) return;
+          refreshingDashboard = true;
+          try {
+            const response = await fetch('/admin/dashboard.json', { headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const data = await response.json();
+            const story = document.querySelector('[data-dashboard-story]');
+            const kpis = document.querySelector('[data-dashboard-kpis]');
+            const orderCount = document.querySelector('[data-dashboard-order-count]');
+            const orderRows = document.querySelector('[data-dashboard-order-rows]');
+            const shopCount = document.querySelector('[data-dashboard-shop-count]');
+            const shopRows = document.querySelector('[data-dashboard-shop-rows]');
+            const subscriptionCount = document.querySelector('[data-dashboard-subscription-count]');
+            const subscriptionRows = document.querySelector('[data-dashboard-subscription-rows]');
+            if (story && data.storyHtml) story.innerHTML = data.storyHtml;
+            if (kpis && data.kpisHtml) kpis.innerHTML = data.kpisHtml;
+            if (orderCount && data.orderCountLabel) orderCount.textContent = data.orderCountLabel;
+            if (orderRows && data.orderRows) orderRows.innerHTML = data.orderRows;
+            if (shopCount && data.shopCountLabel) shopCount.textContent = data.shopCountLabel;
+            if (shopRows && data.shopRows) shopRows.innerHTML = data.shopRows;
+            if (subscriptionCount && data.subscriptionCountLabel) subscriptionCount.textContent = data.subscriptionCountLabel;
+            if (subscriptionRows && data.subscriptionRows) subscriptionRows.innerHTML = data.subscriptionRows;
+            bindCopyButtons();
+          } finally {
+            refreshingDashboard = false;
+          }
+        }
+        function startDashboardPolling() {
+          if (!dashboardPoll) dashboardPoll = setInterval(refreshDashboard, 5000);
+        }
+        startDashboardPolling();
+        window.addEventListener('focus', refreshDashboard);
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) refreshDashboard();
+        });
+        bindCopyButtons();
+        if ('EventSource' in window) {
+          const events = new EventSource('/admin/events');
+          events.addEventListener('dashboard', refreshDashboard);
+          events.onerror = startDashboardPolling;
+        }
+      })();
+    </script>`;
+}
+
 export function shopDashboardSnapshot({ orders, publicLink = '' }) {
   const totalOrders = orders.length;
   const readyOrders = orders.filter((o) => o.order_status === 'Ready for Pickup').length;
@@ -1335,11 +1411,25 @@ export function shopDashboardSnapshot({ orders, publicLink = '' }) {
   const today = new Date().toISOString().slice(0, 10);
   const todayPickups = orders.filter((o) => o.pickup_date === today).length;
   const orderRows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${escapeHtml(o.order_code)}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${escapeHtml(o.pickup_date)}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${escapeHtml(o.payment_status)}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${escapeHtml(o.order_status)}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
+  const leadTitle = totalOrders ? `${readyOrders} order sudah ready untuk pickup` : 'Belum ada order lagi';
+  const leadSubtitle = totalOrders
+    ? `${activeOrders} order masih bergerak · ${todayPickups} pickup hari ini`
+    : 'Kongsi link kedai anda untuk mula terima order berbayar.';
   return {
     activeOrders,
     totalOrders,
     readyOrders,
     todayPickups,
+    storyHtml: storyBand(
+      leadTitle,
+      leadSubtitle,
+      [
+        { label: 'Total order', value: totalOrders, hint: 'keseluruhan queue' },
+        { label: 'Aktif', value: activeOrders, hint: 'belum selesai' },
+        { label: 'Ready pickup', value: readyOrders, hint: 'boleh diserahkan' }
+      ],
+      { href: '/admin/orders', label: 'Semak order sekarang' }
+    ),
     orderCountLabel: `${orders.length} total`,
     orderRows: orderRows || `<tr><td class="empty-state" colspan="7"><b>Belum ada order.</b><span>Kongsi link kedai anda untuk mula terima order berbayar.</span>${publicLink ? `<div class="empty-state-actions">${shopLinkAction(publicLink)}${shopCopyAction(publicLink, 'Salin Link Kedai')}</div>` : ''}</td></tr>`
   };
@@ -1349,47 +1439,9 @@ export function shopDashboard({ user, shop, orders }) {
   const publicLink = `/shop/${escapeHtml(shop.slug)}`;
   const snapshot = shopDashboardSnapshot({ orders, publicLink });
   const headerActions = `${shopLinkAction(publicLink)}${shopCopyAction(publicLink)}`;
-  const leadTitle = snapshot.totalOrders ? `${snapshot.readyOrders} order sudah ready untuk pickup` : 'Belum ada order lagi';
-  const leadSubtitle = snapshot.totalOrders
-    ? `${snapshot.activeOrders} order masih bergerak · ${snapshot.todayPickups} pickup hari ini`
-    : 'Kongsi link kedai anda untuk mula terima order berbayar.';
-  const body = `${storyBand(
-      leadTitle,
-      leadSubtitle,
-      [
-        { label: 'Total order', value: snapshot.totalOrders, hint: 'keseluruhan queue' },
-        { label: 'Aktif', value: snapshot.activeOrders, hint: 'belum selesai' },
-        { label: 'Ready pickup', value: snapshot.readyOrders, hint: 'boleh diserahkan' }
-      ],
-      { href: '/admin/orders', label: 'Semak order sekarang' }
-    )}
+  const body = `<div data-dashboard-story>${snapshot.storyHtml}</div>
     <section id="orders" class="admin-panel"><div class="panel-head"><div><p class="eyebrow">Senarai kerja</p><h2>Order Masuk</h2></div><span data-dashboard-order-count>${snapshot.orderCountLabel}</span></div><div class="table-wrap"><table><thead><tr><th>Order ID</th><th>Customer</th><th>Pickup</th><th>Total</th><th>Payment</th><th>Status</th><th>Created</th></tr></thead><tbody data-dashboard-order-rows>${snapshot.orderRows}</tbody></table></div></section>
-    <script>
-      let dashboardPoll = null;
-      async function refreshDashboard() {
-        const response = await fetch('/admin/dashboard.json', { headers: { Accept: 'application/json' } });
-        if (!response.ok) return;
-        const data = await response.json();
-        const kpis = document.querySelector('[data-dashboard-kpis]');
-        const insight = document.querySelector('[data-dashboard-insight]');
-        const orderCount = document.querySelector('[data-dashboard-order-count]');
-        const orderRows = document.querySelector('[data-dashboard-order-rows]');
-        if (kpis) kpis.innerHTML = data.kpis;
-        if (insight) insight.innerHTML = data.insight;
-        if (orderCount) orderCount.textContent = data.orderCountLabel;
-        if (orderRows) orderRows.innerHTML = data.orderRows;
-      }
-      function startDashboardPolling() {
-        if (!dashboardPoll) dashboardPoll = setInterval(refreshDashboard, 5000);
-      }
-      if ('EventSource' in window) {
-        const events = new EventSource('/admin/events');
-        events.addEventListener('dashboard', refreshDashboard);
-        events.onerror = startDashboardPolling;
-      } else {
-        startDashboardPolling();
-      }
-    </script>`;
+    ${dashboardLiveScript()}`;
   return layout('Shop Dashboard', adminShell({ title: 'Ringkasan', subtitle: 'Pantau order print dan pickup pelanggan.', userLabel: user.email, role: 'Shop Dashboard', shopSlug: shop.slug, body, headerActions }), shop.primary_color);
 }
 
@@ -1699,6 +1751,13 @@ function superShopSummary(shops, orders, subscriptions) {
   };
 }
 
+function superKpisHtml(stats) {
+  return `${metricCard('Total Shops', stats.totalShops, 'red', 'orders', true, 'Tenant keseluruhan')}
+      ${metricCard('Active Shops', stats.activeShops, 'blue', 'paid', false, 'Sedang beroperasi')}
+      ${metricCard('Paid Subscriptions', stats.successfulSubscriptions, 'yellow', 'alert', false, 'Bayaran berjaya')}
+      ${metricCard('Revenue This Month', formatMoney(stats.revenueThisMonth), 'green', 'check', false, 'Subscription revenue')}`;
+}
+
 function superShopCard(shop, orders, subscriptions) {
   const orderCount = orders.filter((o) => o.shop_id === shop.id).length;
   const subscription = subscriptions.find((sub) => sub.shop_id === shop.id) || null;
@@ -1718,6 +1777,28 @@ function superShopCard(shop, orders, subscriptions) {
       <td>${displayDateShort(shop.created_at)}</td>
       <td>${adminRowActions({ id: shop.id, slug: shop.slug, active: shop.is_active })}</td>
     </tr>`;
+}
+
+function superSubscriptionRows(shops, subscriptions) {
+  return subscriptions.map((sub) => {
+    const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
+    const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
+    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(planStatusLabel(sub.payment_status))}</span></td><td>${shopCell}</td><td>${displayDateTime(sub.created_at)}</td></tr>`;
+  }).join('');
+}
+
+export function superDashboardSnapshot({ shops, orders, subscriptions = [] }) {
+  const stats = superShopSummary(shops, orders, subscriptions);
+  const shopRows = shops.map((s) => superShopCard(s, orders, subscriptions)).join('');
+  const subscriptionRows = superSubscriptionRows(shops, subscriptions);
+  return {
+    ...stats,
+    kpisHtml: superKpisHtml(stats),
+    shopCountLabel: `${shops.length} total`,
+    shopRows: shopRows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>',
+    subscriptionCountLabel: `${subscriptions.length} total`,
+    subscriptionRows: subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'
+  };
 }
 
 function superTenantForm({ shop = null, action = '', created = false }) {
@@ -1784,37 +1865,28 @@ function filterShopsForAdmin(shops, { q = '', status = '', plan = '' } = {}) {
 }
 
 export function superDashboard({ shops, orders, subscriptions = [], userEmail = 'owner@cetaknow.local' }) {
-  const stats = superShopSummary(shops, orders, subscriptions);
-  const rows = shops.map((s) => superShopCard(s, orders, subscriptions)).join('');
-  const subscriptionRows = subscriptions.map((sub) => {
-    const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
-    const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
-    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(planStatusLabel(sub.payment_status))}</span></td><td>${shopCell}</td><td>${displayDateTime(sub.created_at)}</td></tr>`;
-  }).join('');
-  const body = `<section class="admin-kpi-grid">
-      ${metricCard('Total Shops', stats.totalShops, 'red', 'orders', true, 'Tenant keseluruhan')}
-      ${metricCard('Active Shops', stats.activeShops, 'blue', 'paid', false, 'Sedang beroperasi')}
-      ${metricCard('Paid Subscriptions', stats.successfulSubscriptions, 'yellow', 'alert', false, 'Bayaran berjaya')}
-      ${metricCard('Revenue This Month', formatMoney(stats.revenueThisMonth), 'green', 'check', false, 'Subscription revenue')}
+  const snapshot = superDashboardSnapshot({ shops, orders, subscriptions });
+  const body = `<section class="admin-kpi-grid" data-dashboard-kpis>
+      ${snapshot.kpisHtml}
     </section>
     <section id="orders" class="admin-panel">
-      <div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Shops</h2></div><span>${shops.length} total</span></div>
+      <div class="panel-head"><div><p class="eyebrow">Tenant aktif</p><h2>Shops</h2></div><span data-dashboard-shop-count>${snapshot.shopCountLabel}</span></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Shop</th><th>Status</th><th>Plan</th><th>Subscription</th><th>Orders</th><th>Created</th><th>Action</th></tr></thead>
-          <tbody>${rows || '<tr><td class="empty-state" colspan="7"><b>Belum ada kedai.</b><span>Kedai yang berjaya setup akan muncul di sini.</span></td></tr>'}</tbody>
+          <tbody data-dashboard-shop-rows>${snapshot.shopRows}</tbody>
         </table>
       </div>
     </section>
     <section class="admin-panel lead-table">
-      <div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan Berbayar</h2></div><span>${subscriptions.length} total</span></div>
+      <div class="panel-head"><div><p class="eyebrow">Pemerolehan</p><h2>Langganan Berbayar</h2></div><span data-dashboard-subscription-count>${snapshot.subscriptionCountLabel}</span></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Code</th><th>Email</th><th>Phone</th><th>Amount</th><th>Payment</th><th>Shop</th><th>Created</th></tr></thead>
-          <tbody>${subscriptionRows || '<tr><td class="empty-state" colspan="7"><b>No subscriptions yet.</b><span>Paid subscription leads will appear here.</span></td></tr>'}</tbody>
+          <tbody data-dashboard-subscription-rows>${snapshot.subscriptionRows}</tbody>
         </table>
       </div>
-    </section>${copyScript()}`;
+    </section>${copyScript()}${dashboardLiveScript()}`;
   return layout('Platform Overview', adminShell({ title: 'Platform Overview', subtitle: 'Manage shops, subscriptions, and revenue across CetakNow.', userLabel: userEmail, role: 'Super Admin', body }));
 }
 

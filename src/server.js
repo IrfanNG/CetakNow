@@ -10,11 +10,12 @@ import { isSlotAvailable, syncPickupSlotsForShop } from './pickup.js';
 import { nextOrderCode } from './order.js';
 import { createPayment, markPaymentPaid } from './payment.js';
 import { sendPaidOrderEmail } from './notify.js';
-import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopDashboardSnapshot, shopPage, shopSettingsPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard, superShopDetailPage } from './views.js';
+import { confirmationPage, landingPage, loginPage, mockPaymentPage, mockSubscriptionPaymentPage, orderDetails, ordersManagementPage, revenuePage, shopDashboard, shopDashboardSnapshot, shopPage, shopSettingsPage, shopsManagementPage, subscriptionConfirmationPage, subscriptionPage, superDashboard, superDashboardSnapshot, superShopDetailPage } from './views.js';
 
 const MAX_PDF_SIZE = 50 * 1024 * 1024;
 const MAX_PDF_FILES = 10;
 const adminEventClients = new Map();
+const superAdminEventClients = new Set();
 
 export async function app(req, res) {
   try {
@@ -170,6 +171,7 @@ async function completeMockSubscriptionPayment(res, code) {
       subscription.updated_at = paidAt;
     }
   });
+  notifyAdminDashboard();
   redirect(res, `/subscriptions/${code}/confirmation`);
 }
 
@@ -185,6 +187,7 @@ async function setupSubscriptionShop(req, res, code) {
   const slugBase = slugify(form.slug || form.shop_name);
   const password = String(form.password || '');
   const passwordConfirm = String(form.password_confirm || '');
+  let changedShopId = '';
   if (!String(form.shop_name || '').trim()) throw Object.assign(new Error('Nama kedai diperlukan'), { status: 400 });
   if (!slugBase) throw Object.assign(new Error('Slug kedai tidak sah'), { status: 400 });
   if (password.length < 6) throw Object.assign(new Error('Password dashboard mesti sekurang-kurangnya 6 aksara'), { status: 400 });
@@ -194,7 +197,10 @@ async function setupSubscriptionShop(req, res, code) {
     const subscription = db.subscriptions?.find((s) => s.subscription_code === code);
     if (!subscription || subscription.payment_status !== 'paid') throw Object.assign(new Error('Subscription not found'), { status: 404 });
     const existingShop = subscription.shop_id ? db.shops.find((s) => s.id === subscription.shop_id) : null;
-    if (existingShop) return existingShop.slug;
+    if (existingShop) {
+      changedShopId = existingShop.id;
+      return existingShop.slug;
+    }
 
     db.shops ||= [];
     db.users ||= [];
@@ -278,8 +284,10 @@ async function setupSubscriptionShop(req, res, code) {
     }
     subscription.shop_id = shop.id;
     subscription.updated_at = createdAt;
+    changedShopId = shop.id;
     return shop.slug;
   });
+  notifyAdminDashboard(changedShopId);
   redirect(res, `/subscriptions/${code}/confirmation`);
 }
 
@@ -447,22 +455,29 @@ function shopDashboardData(db, user) {
 function renderDashboardJson(req, res, db) {
   const user = requireUser(req, db);
   if (!user) return json(res, 401, { error: 'Login required' });
-  if (user.role === 'super_admin') return json(res, 404, { error: 'Not found' });
+  if (user.role === 'super_admin') return json(res, 200, superDashboardSnapshot({ shops: db.shops, orders: db.orders, subscriptions: db.subscriptions || [] }));
   const { shop, orders } = shopDashboardData(db, user);
   if (!shop) return json(res, 404, { error: 'Shop not found' });
-  json(res, 200, shopDashboardSnapshot({ orders }));
+  json(res, 200, shopDashboardSnapshot({ orders, publicLink: `/shop/${shop.slug}` }));
 }
 
 function renderAdminEvents(req, res, db) {
   const user = requireUser(req, db);
-  if (!user || user.role !== 'shop_admin') return send(res, 401, 'Login required');
-  const shopId = user.shop_id;
+  if (!user || !['shop_admin', 'super_admin'].includes(user.role)) return send(res, 401, 'Login required');
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive'
   });
   res.write(': connected\n\n');
+  if (user.role === 'super_admin') {
+    superAdminEventClients.add(res);
+    req.on('close', () => {
+      superAdminEventClients.delete(res);
+    });
+    return;
+  }
+  const shopId = user.shop_id;
   const clients = adminEventClients.get(shopId) || new Set();
   clients.add(res);
   adminEventClients.set(shopId, clients);
@@ -473,8 +488,12 @@ function renderAdminEvents(req, res, db) {
 }
 
 function notifyAdminDashboard(shopId) {
-  if (!shopId) return;
-  for (const res of adminEventClients.get(shopId) || []) {
+  if (shopId) {
+    for (const res of adminEventClients.get(shopId) || []) {
+      res.write(`event: dashboard\ndata: ${JSON.stringify({ updated_at: nowIso() })}\n\n`);
+    }
+  }
+  for (const res of superAdminEventClients) {
     res.write(`event: dashboard\ndata: ${JSON.stringify({ updated_at: nowIso() })}\n\n`);
   }
 }
@@ -654,6 +673,7 @@ function renderSuperShopDetail(req, res, db, shopId) {
 
 async function updateSuperShop(req, res, shopId) {
   const form = await parseForm(req);
+  let changedShopId = '';
   await tx(async (db) => {
     const user = requireUser(req, db, 'super_admin');
     if (!user) throw Object.assign(new Error('Not found'), { status: 404 });
@@ -686,7 +706,9 @@ async function updateSuperShop(req, res, shopId) {
       if (String(form.password || '').trim()) owner.password = String(form.password).trim();
     }
     syncPickupSlotsForShop(db, shop);
+    changedShopId = shop.id;
   });
+  notifyAdminDashboard(changedShopId);
   redirect(res, `/admin/shops/${shopId}?updated=1`);
 }
 
@@ -703,6 +725,7 @@ function renderOrdersManagement(req, res, db, updated = false, page = 1) {
 }
 
 async function toggleShopStatus(req, res, shopId) {
+  let changedShopId = '';
   await tx(async (db) => {
     const user = requireUser(req, db, 'super_admin');
     if (!user) throw Object.assign(new Error('Not found'), { status: 404 });
@@ -710,7 +733,9 @@ async function toggleShopStatus(req, res, shopId) {
     if (!shop) throw Object.assign(new Error('Shop not found'), { status: 404 });
     shop.is_active = !shop.is_active;
     shop.updated_at = nowIso();
+    changedShopId = shop.id;
   });
+  notifyAdminDashboard(changedShopId);
   redirect(res, '/admin/shops');
 }
 

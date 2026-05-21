@@ -129,6 +129,45 @@
 .shop-order-grid{grid-template-columns:minmax(0,860px);justify-content:center}
 .shop-order-card{width:100%}
 
+/* Public shop order page polish */
+.shop-order-page{padding:28px max(16px,calc((100vw - 920px)/2)) 44px;background:radial-gradient(circle at 16% 0%,rgba(11,79,159,.08),transparent 26%),linear-gradient(180deg,#f8fbff 0%,#f6f9fd 58%,#fff 100%)}
+.shop-hero-panel{width:min(860px,100%);margin:0 auto 18px;padding:24px 26px;border-top:0;border-color:#dbe7f5;border-radius:22px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 16px 42px rgba(6,43,102,.07)}
+.shop-hero-panel h1{max-width:720px;margin:7px 0 8px;font-size:clamp(2rem,4vw,3.15rem);line-height:1.02;letter-spacing:-.05em;color:#061a3d}
+.shop-hero-panel p:not(.eyebrow){max-width:680px;color:#52627a;font-size:.98rem;font-weight:700;line-height:1.58}
+.shop-hero-panel .eyebrow,.form-group .eyebrow{margin:0;color:#0b4f9f;font-size:.7rem;letter-spacing:.16em}
+.shop-hero-panel .map{flex:0 0 auto;min-height:42px;padding:10px 16px;border-radius:999px;background:#062b66;color:#fff;font-size:.9rem;box-shadow:0 10px 24px rgba(6,43,102,.14)}
+.shop-order-grid{grid-template-columns:minmax(0,820px);gap:0}
+.shop-order-card{padding:30px;border-color:#dbe7f5;border-radius:24px;background:#fff;box-shadow:0 20px 55px rgba(6,43,102,.08)}
+.form-head{margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid #e8eef6}
+.form-head h2{font-size:clamp(1.65rem,3vw,2.15rem);line-height:1.08;letter-spacing:-.04em}
+.form-group{display:grid;gap:15px;margin:0;padding:22px 0;border-bottom:1px solid #eef2f7}
+.form-group:first-of-type{padding-top:0}
+.form-group h3,.product-addons h3{margin:4px 0 0;color:#071426;font-size:1rem;line-height:1.2;letter-spacing:-.015em}
+.group-head{display:grid;gap:3px}
+.shop-order-card label{gap:8px;margin:0;color:#142033;font-size:.91rem;font-weight:900}
+.shop-order-card input,.shop-order-card select,.shop-order-card textarea{min-height:52px;padding:13px 14px;border:1px solid #d7e2ee;border-radius:14px;background:#fff;color:#142033;font-size:.96rem;font-weight:750;transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+.shop-order-card input:hover,.shop-order-card select:hover,.shop-order-card textarea:hover{border-color:#b9c9dc}
+.shop-order-card input:focus,.shop-order-card select:focus,.shop-order-card textarea:focus{outline:0;border-color:#062b66;box-shadow:0 0 0 4px rgba(255,194,10,.25)}
+.shop-order-card textarea{min-height:104px;resize:vertical}
+.field-block{position:relative;padding:20px;border:1.5px dashed #b8cbe0;border-radius:18px;background:linear-gradient(180deg,#f8fbff,#fff);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.field-block label{gap:10px}
+.field-block input[type="file"]{min-height:auto;padding:12px;border:1px solid #dbe7f5;background:#fff}
+.field-block small{display:block;color:#64748b;font-size:.84rem;font-weight:750;line-height:1.45}
+.product-addons{display:grid;gap:14px;margin:0;padding:22px 0;border:0;border-bottom:1px solid #eef2f7;border-radius:0;background:transparent}
+.product-options{gap:8px}
+.product-option{grid-template-columns:auto minmax(0,1fr) auto;gap:12px;min-height:58px;padding:12px 14px;border-color:#dbe7f5;border-radius:16px;background:#f8fbff}
+.product-option:hover{border-color:#b9c9dc;background:#fff}
+.product-option input{accent-color:#062b66}
+.product-option b{display:block;color:#142033;font-size:.94rem}
+.product-option small{color:#64748b;font-size:.82rem;line-height:1.35}
+.product-option strong{white-space:nowrap;color:#062b66;font-size:.94rem;font-weight:950}
+.shop-policy{margin:22px 0 0;padding:16px 17px;border:1px solid #f3df9c;border-radius:18px;background:#fff9e8;color:#334155;font-size:.92rem;font-weight:800;line-height:1.55}
+.shop-policy input{accent-color:#062b66;min-height:auto;margin-top:4px}
+.shop-submit{display:inline-flex;align-items:center;justify-content:center;min-height:60px;margin-top:18px;border-radius:18px;background:#062b66;color:#fff;font-size:1.02rem;font-weight:950;line-height:1;text-align:center;box-shadow:0 16px 34px rgba(6,43,102,.18);transition:filter .18s ease,transform .18s ease,box-shadow .18s ease}
+.shop-submit:hover,.shop-submit:focus-visible{filter:brightness(.98);transform:translateY(-1px);box-shadow:0 18px 38px rgba(6,43,102,.22)}
+@media(max-width:920px){.shop-order-page{padding:20px 14px 34px}.shop-hero-panel{display:grid;gap:16px;padding:22px}.shop-hero-panel .map{justify-self:start;margin-top:0}.shop-hero-panel h1{font-size:clamp(2rem,8vw,3rem)}}
+@media(max-width:620px){.shop-order-card{padding:20px;border-radius:22px}.form-head{margin-bottom:20px}.form-group{gap:13px;padding:20px 0}.shop-order-card .two{gap:12px}.shop-hero-panel .map,.shop-submit{width:100%;justify-content:center}.product-option{grid-template-columns:auto 1fr;align-items:start}.product-option strong{grid-column:2;margin-top:-2px}.shop-policy{align-items:flex-start;padding:14px}.field-block{padding:16px}}
+
 
 /* CetakNow branded login page */
 .login-page{min-height:100vh;display:grid;place-items:center;padding:42px 22px;background:radial-gradient(circle at 18% 6%,rgba(255,194,10,.20),transparent 24%),radial-gradient(circle at 86% 4%,rgba(11,79,159,.15),transparent 30%),linear-gradient(180deg,#f7fbff 0%,#eaf4ff 52%,#f8fbff 100%);color:#142033}

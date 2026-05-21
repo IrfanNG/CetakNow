@@ -411,6 +411,19 @@ test('shop admin dashboard JSON reflects new orders for live updates', async ({ 
   expect(data.orderRows).toContain('Paid / New Order');
 });
 
+test('super admin dashboard JSON reflects platform changes for live updates', async ({ page }) => {
+  await createPaidOrder(page);
+  await login(page, 'owner@cetaknow.local');
+  const dashboard = await page.request.get('/admin/dashboard.json');
+  expect(dashboard.ok()).toBeTruthy();
+  const data = await dashboard.json();
+  expect(data.totalShops).toBe(1);
+  expect(data.shopRows).toContain('Qalam Irma');
+  expect(data.shopRows).toContain('1</td>');
+  expect(data.subscriptionCountLabel).toBe('0 total');
+  expect(data.kpisHtml).toContain('Total Shops');
+});
+
 test('shop admin can update order status lifecycle', async ({ page }) => {
   await createPaidOrder(page);
   await login(page, 'admin@qalamirma.local');
