@@ -840,6 +840,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await ensureDb();
   await fs.mkdir(UPLOAD_DIR, { recursive: true });
   const port = Number(process.env.PORT || 3000);
-  const host = process.env.HOST || '127.0.0.1';
+  const host = process.env.HOST || '0.0.0.0';
   http.createServer(app).listen(port, host, () => console.log(`CetakNow running at http://${host}:${port}`));
 }
