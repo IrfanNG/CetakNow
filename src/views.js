@@ -1255,14 +1255,25 @@ function planLabel(value = '') {
   return value ? String(value) : 'Pilot';
 }
 
-function displayDateTime(value) {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : '-';
+function formatDateTimeMY(value) {
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-MY', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+  }).format(date);
 }
 
-function displayDateShort(value) {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('en-GB') : '-';
+function formatDateMY(value) {
+  if (!value) return '-';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-MY', {
+    timeZone: 'Asia/Kuala_Lumpur',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date);
 }
 
 function planStatusLabel(status = '') {
@@ -1345,8 +1356,8 @@ export function subscriptionPage({ user, shop, subscription = null, payment = nu
       <p><span>Code</span><b>${escapeHtml(subscription?.subscription_code || '-')}</b></p>
       <p><span>Email</span><b>${escapeHtml(subscription?.email || user.email || shop.email || '-')}</b></p>
       <p><span>Amount Paid</span><b>${formatMoney(amount)}</b></p>
-      <p><span>Created</span><b>${displayDateTime(subscription?.created_at || shop.created_at)}</b></p>
-      <p><span>Paid At</span><b>${displayDateTime(payment?.paid_at)}</b></p>
+      <p><span>Created</span><b>${formatDateTimeMY(subscription?.created_at || shop.created_at)}</b></p>
+      <p><span>Paid At</span><b>${formatDateTimeMY(payment?.paid_at)}</b></p>
       <p><span>Link Kedai</span><b><span class="shop-path-row"><a href="${publicLink}">${publicLink}</a>${copyUrlButton(publicLink, 'Salin')}</span></b></p>
     </div>
   </section>`;
@@ -1446,7 +1457,7 @@ export function shopDashboardSnapshot({ orders, publicLink = '' }) {
   const activeOrders = orders.filter((o) => !['Completed', 'Cancelled'].includes(o.order_status)).length;
   const today = new Date().toISOString().slice(0, 10);
   const todayPickups = orders.filter((o) => o.pickup_date === today).length;
-  const orderRows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${escapeHtml(o.order_code)}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${escapeHtml(o.pickup_date)}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${escapeHtml(o.payment_status)}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${escapeHtml(o.order_status)}</span></td><td>${new Date(o.created_at).toLocaleString()}</td></tr>`).join('');
+  const orderRows = orders.map((o) => `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${escapeHtml(o.order_code)}</a></td><td><b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small></td><td>${escapeHtml(o.pickup_date)}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${escapeHtml(o.payment_status)}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${escapeHtml(o.order_status)}</span></td><td>${formatDateTimeMY(o.created_at)}</td></tr>`).join('');
   const leadTitle = totalOrders ? `${readyOrders} order sudah ready untuk pickup` : 'Belum ada order lagi';
   const leadSubtitle = totalOrders
     ? `${activeOrders} order masih bergerak · ${todayPickups} pickup hari ini`
@@ -1592,11 +1603,6 @@ function normalizeDateInput(value) {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === raw ? raw : new Date().toISOString().slice(0, 10);
 }
 
-function displayDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
-}
-
 function normalizeRangeInput(value) {
   const range = String(value || '').toLowerCase();
   if (['today', 'week', 'month', 'year'].includes(range)) return range;
@@ -1674,26 +1680,26 @@ export function revenuePage({ user, shop = null, shops = [], orders = [], paymen
     if (!isSubscriptionReport) {
       const customer = item.order?.customer_name || item.payment.customer_name || '-';
       const customerPhone = item.order?.customer_phone || item.payment.customer_phone || '';
-      return `<tr><td>${displayDateTime(item.payment.paid_at)}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(customer)}</b>${customerPhone ? `<small>${escapeHtml(customerPhone)}</small>` : ''}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
+      return `<tr><td>${formatDateTimeMY(item.payment.paid_at)}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(customer)}</b>${customerPhone ? `<small>${escapeHtml(customerPhone)}</small>` : ''}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
     }
     const shopName = item.shop?.name || item.order?.customer_name || '-';
     const plan = item.subscription?.plan_label || item.shop?.plan || 'Paid';
     const sourceLabel = `${escapeHtml(plan)}${item.shop ? `<small>${escapeHtml(item.shop.name)}</small>` : ''}`;
-    return `<tr><td>${new Date(item.payment.paid_at).toLocaleString()}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(shopName)}</b>${item.shop ? `<small>/shop/${escapeHtml(item.shop.slug)}</small>` : ''}</td><td>${sourceLabel}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
+    return `<tr><td>${formatDateTimeMY(item.payment.paid_at)}</td><td><b>${escapeHtml(ref)}</b></td><td><b>${escapeHtml(shopName)}</b>${item.shop ? `<small>/shop/${escapeHtml(item.shop.slug)}</small>` : ''}</td><td>${sourceLabel}</td><td><b>${formatMoney(item.amount)}</b></td><td><span class="pill ${statusClass(item.payment.status)}">${escapeHtml(paymentLabel)}</span></td></tr>`;
   }).join('');
   const title = isSubscriptionReport ? 'Revenue Overview' : 'Hasil Order';
   const subtitle = isSubscriptionReport ? 'Track paid subscriptions and platform revenue.' : 'Pantau bayaran order print yang berjaya.';
   const currentRangeLabel = activeRange === 'today' ? 'Today' : activeRange === 'week' ? 'This Week' : activeRange === 'year' ? 'This Year' : 'This Month';
   const headerActions = isSubscriptionReport ? `<button class="admin-action primary" type="button" disabled aria-disabled="true">Export CSV</button>` : '';
   const body = `<section class="admin-kpi-grid revenue-kpis">
-      ${metricCard('Hasil Tarikh Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true, `Paparan: ${displayDate(reportDate)}`)}
+      ${metricCard('Hasil Tarikh Ini', formatMoney(sumAmount(daily)), 'red', 'paid', true, `Paparan: ${formatDateMY(reportDate)}`)}
       ${metricCard('Bulan Ini', formatMoney(sumAmount(monthly)), 'blue', 'paid', false, `${weekly.length} transaksi minggu ini`)}
       ${metricCard('Tahun Ini', formatMoney(sumAmount(yearly)), 'yellow', 'alert', false, `${currentRangeLabel} aktif`)}
       ${metricCard('Jumlah Transaksi', source.length, 'green', 'check', false, `${source.length ? 'Transaksi berbayar' : 'Belum ada transaksi'}`)}
     </section>
     <section class="admin-panel revenue-panel">
       <div class="panel-head revenue-head">
-        <div><p class="eyebrow">Pemantauan hasil</p><h2>${isSubscriptionReport ? 'Langganan Berbayar' : 'Order Berbayar'}</h2><p class="revenue-date-note">Paparan berdasarkan tarikh: ${displayDate(reportDate)}</p></div>
+        <div><p class="eyebrow">Pemantauan hasil</p><h2>${isSubscriptionReport ? 'Langganan Berbayar' : 'Order Berbayar'}</h2><p class="revenue-date-note">Paparan berdasarkan tarikh: ${formatDateMY(reportDate)}</p></div>
         <span>${source.length} transaksi</span>
       </div>
       <form class="revenue-filter" method="get" action="/admin/revenue">
@@ -1743,7 +1749,7 @@ export function ordersManagementPage({ user, shop = null, shops = [], orders, up
     const orderShop = shop || shops.find((s) => s.id === o.shop_id);
     const customer = `<b>${escapeHtml(o.customer_name)}</b><small>${escapeHtml(o.customer_phone)}</small>`;
     const shopCell = orderShop ? `<small>${escapeHtml(orderShop.name)}</small>` : '';
-    return `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a>${shopCell}</td><td>${customer}</td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${new Date(o.created_at).toLocaleString()}</td><td><a class="table-action neutral" href="/admin/orders/${o.id}">Urus</a></td></tr>`;
+    return `<tr><td><a class="admin-link" href="/admin/orders/${o.id}">${o.order_code}</a>${shopCell}</td><td>${customer}</td><td>${o.pickup_date}</td><td>${formatMoney(o.total_amount)}</td><td><span class="pill ${statusClass(o.payment_status)}">${o.payment_status}</span></td><td><span class="status-chip ${statusClass(o.order_status)}">${o.order_status}</span></td><td>${formatDateTimeMY(o.created_at)}</td><td><a class="table-action neutral" href="/admin/orders/${o.id}">Urus</a></td></tr>`;
   }).join('');
   const pagination = totalOrders > pageSize ? `<div class="table-pagination"><a class="page-link ${currentPage === 1 ? 'disabled' : ''}" ${currentPage === 1 ? 'aria-disabled="true"' : `href="/admin/orders?page=${currentPage - 1}"`}>Sebelumnya</a><span>Page ${currentPage} / ${totalPages}</span><a class="page-link ${currentPage === totalPages ? 'disabled' : ''}" ${currentPage === totalPages ? 'aria-disabled="true"' : `href="/admin/orders?page=${currentPage + 1}"`}>Seterusnya</a></div>` : '';
   const successBanner = updated ? '<div class="admin-success" role="status">Status order berjaya dikemaskini.</div>' : '';
@@ -1767,7 +1773,7 @@ export function orderDetails({ order, shop, slot, user, updated = false }) {
   const files = order.files?.length ? order.files : [{ original_file_name: order.original_file_name || 'order.pdf', page_count: order.page_count, file_path: order.file_path }];
   const fileLinks = files.map((file, index) => `<a class="button ${index ? 'ghost' : ''}" href="/admin/orders/${order.id}/download/${index + 1}">Download PDF ${files.length > 1 ? index + 1 : ''}</a>`).join('');
   const fileList = files.map((file, index) => `<li><b>${escapeHtml(file.original_file_name || `PDF ${index + 1}`)}</b><span>${Number(file.page_count || 0)} page(s)</span></li>`).join('');
-  const body = `${successBanner}<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Files</span><b>${files.length}</b></p><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Paper size</span><b>${escapeHtml(order.paper_size || 'A4')}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Add-ons</span><b>${addOns}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Print subtotal</span><b>${formatMoney(order.subtotal ?? order.total_amount)}</b></p><p><span>Add-on total</span><b>${formatMoney(order.product_total || 0)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${new Date(order.file_delete_at).toLocaleString()}</b></p></div><div class="file-list"><p class="eyebrow">Uploaded PDFs</p><ul>${fileList}</ul></div><div class="detail-actions">${fileLinks}<a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
+  const body = `${successBanner}<section class="admin-detail"><p class="eyebrow">Order detail</p><div class="detail-title"><div><h1>${order.order_code}</h1><p>${escapeHtml(order.customer_name)} · <a href="https://wa.me/${escapeHtml(order.customer_phone)}">WhatsApp</a></p></div><span class="status-chip ${statusClass(order.order_status)}">${order.order_status}</span></div><div class="receipt detail-grid"><p><span>Files</span><b>${files.length}</b></p><p><span>Pages</span><b>${order.page_count}</b></p><p><span>Paper size</span><b>${escapeHtml(order.paper_size || 'A4')}</b></p><p><span>Type</span><b>${order.print_type}</b></p><p><span>Sides</span><b>${order.sides}</b></p><p><span>Copies</span><b>${order.copies}</b></p><p><span>Add-ons</span><b>${addOns}</b></p><p><span>Pickup</span><b>${order.pickup_date}, ${labelSlot(slot)}</b></p><p><span>Print subtotal</span><b>${formatMoney(order.subtotal ?? order.total_amount)}</b></p><p><span>Add-on total</span><b>${formatMoney(order.product_total || 0)}</b></p><p><span>Total</span><b>${formatMoney(order.total_amount)}</b></p><p><span>Notes</span><b>${order.notes ? escapeHtml(order.notes) : '-'}</b></p><p><span>File delete at</span><b>${formatDateTimeMY(order.file_delete_at)}</b></p></div><div class="file-list"><p class="eyebrow">Uploaded PDFs</p><ul>${fileList}</ul></div><div class="detail-actions">${fileLinks}<a class="button ghost" href="/admin">Back to dashboard</a></div><form class="status-form" method="post" action="/admin/orders/${order.id}/status"><label>Status <select name="order_status">${statuses}</select></label><button>Update status</button></form></section>`;
   return layout(order.order_code, adminShell({ title: order.order_code, subtitle: 'Order detail', userLabel: user?.email || shop.name, active: 'orders', role: 'Shop Dashboard', shopSlug: shop.slug, body }), shop.primary_color);
 }
 
@@ -1810,7 +1816,7 @@ function superShopCard(shop, orders, subscriptions) {
       <td><span class="plan-chip ${statusClass(shop.plan)}">${escapeHtml(plan)}</span></td>
       <td><span class="pill ${paymentBadge}">${escapeHtml(planStatusLabel(shop.subscription_status))}</span></td>
       <td>${orderCount}</td>
-      <td>${displayDateShort(shop.created_at)}</td>
+      <td>${formatDateMY(shop.created_at)}</td>
       <td>${adminRowActions({ id: shop.id, slug: shop.slug, active: shop.is_active })}</td>
     </tr>`;
 }
@@ -1819,7 +1825,7 @@ function superSubscriptionRows(shops, subscriptions) {
   return subscriptions.map((sub) => {
     const shop = sub.shop_id ? shops.find((s) => s.id === sub.shop_id) : null;
     const shopCell = shop ? `<a class="admin-link" href="/shop/${escapeHtml(shop.slug)}">${escapeHtml(shop.name)}</a>` : '-';
-    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(planStatusLabel(sub.payment_status))}</span></td><td>${shopCell}</td><td>${displayDateTime(sub.created_at)}</td></tr>`;
+    return `<tr><td><b>${escapeHtml(sub.subscription_code)}</b><small>${escapeHtml(sub.plan_label)}</small></td><td>${escapeHtml(sub.email)}</td><td>${escapeHtml(sub.phone)}</td><td>${formatMoney(sub.amount)}</td><td><span class="pill ${statusClass(sub.payment_status)}">${escapeHtml(planStatusLabel(sub.payment_status))}</span></td><td>${shopCell}</td><td>${formatDateTimeMY(sub.created_at)}</td></tr>`;
   }).join('');
 }
 
