@@ -16,5 +16,12 @@
 - [x] Super admin dashboard
 - [x] Email notification log
 - [x] 7-day cleanup command
+- [x] PostgreSQL persistence adapter
+- [x] Railway deployment
+- [x] Railway deployment documentation
 - [ ] Replace mock gateway with real Billplz credentials
 - [ ] Port to Laravel + Filament when PHP toolchain exists
+
+## Current MVP Status
+
+Production-pilot ready on Railway. Remaining blocker for real commercial use is switching from mock payment flow to live Billplz credentials and confirming an end-to-end paid order in production.
